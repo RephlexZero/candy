@@ -22,7 +22,14 @@ pub enum Case {
 }
 
 impl Case {
-    pub const ALL: [Case; 6] = [Case::Any, Case::Pascal, Case::Camel, Case::Snake, Case::ScreamingSnake, Case::PascalSnake];
+    pub const ALL: [Case; 6] = [
+        Case::Any,
+        Case::Pascal,
+        Case::Camel,
+        Case::Snake,
+        Case::ScreamingSnake,
+        Case::PascalSnake,
+    ];
 
     pub fn label(self) -> &'static str {
         match self {
@@ -58,17 +65,27 @@ impl Case {
             Case::Camel => b[0].is_ascii_lowercase() && b.iter().all(alnum),
             Case::Snake => {
                 b[0].is_ascii_lowercase()
-                    && s.split('_').all(|w| !w.is_empty() && w.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit()))
+                    && s.split('_').all(|w| {
+                        !w.is_empty()
+                            && w.bytes()
+                                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+                    })
             }
             Case::ScreamingSnake => {
                 b[0].is_ascii_uppercase()
-                    && s.split('_').all(|w| !w.is_empty() && w.bytes().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()))
+                    && s.split('_').all(|w| {
+                        !w.is_empty()
+                            && w.bytes()
+                                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+                    })
             }
             Case::PascalSnake => {
                 b[0].is_ascii_uppercase()
                     && s.split('_').all(|w| {
                         let wb = w.as_bytes();
-                        !wb.is_empty() && (wb[0].is_ascii_uppercase() || wb[0].is_ascii_digit()) && wb.iter().all(alnum)
+                        !wb.is_empty()
+                            && (wb[0].is_ascii_uppercase() || wb[0].is_ascii_digit())
+                            && wb.iter().all(alnum)
                     })
             }
         }
@@ -321,7 +338,10 @@ pub fn preset(id: &str) -> Option<Convention> {
 
 /// The convention stored in the file, if any (preset id or custom JSON).
 pub fn from_dbc(dbc: &Dbc) -> Option<Convention> {
-    let v = dbc.network_attribute(CONVENTION_ATTR)?.as_str()?.to_string();
+    let v = dbc
+        .network_attribute(CONVENTION_ATTR)?
+        .as_str()?
+        .to_string();
     preset(&v).or_else(|| serde_json::from_str(&v).ok())
 }
 
@@ -335,16 +355,100 @@ pub fn to_attr_string(conv: &Convention) -> String {
 
 const KEYWORDS: &[&str] = &[
     // C / C++
-    "auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern",
-    "float", "for", "goto", "if", "inline", "int", "long", "register", "restrict", "return", "short", "signed",
-    "sizeof", "static", "struct", "switch", "typedef", "union", "unsigned", "void", "volatile", "while", "bool",
-    "class", "delete", "new", "private", "protected", "public", "template", "this", "throw", "try", "catch",
+    "auto",
+    "break",
+    "case",
+    "char",
+    "const",
+    "continue",
+    "default",
+    "do",
+    "double",
+    "else",
+    "enum",
+    "extern",
+    "float",
+    "for",
+    "goto",
+    "if",
+    "inline",
+    "int",
+    "long",
+    "register",
+    "restrict",
+    "return",
+    "short",
+    "signed",
+    "sizeof",
+    "static",
+    "struct",
+    "switch",
+    "typedef",
+    "union",
+    "unsigned",
+    "void",
+    "volatile",
+    "while",
+    "bool",
+    "class",
+    "delete",
+    "new",
+    "private",
+    "protected",
+    "public",
+    "template",
+    "this",
+    "throw",
+    "try",
+    "catch",
     // Rust
-    "as", "async", "await", "crate", "dyn", "fn", "impl", "in", "let", "loop", "match", "mod", "move", "mut",
-    "pub", "ref", "self", "Self", "super", "trait", "type", "unsafe", "use", "where", "yield",
+    "as",
+    "async",
+    "await",
+    "crate",
+    "dyn",
+    "fn",
+    "impl",
+    "in",
+    "let",
+    "loop",
+    "match",
+    "mod",
+    "move",
+    "mut",
+    "pub",
+    "ref",
+    "self",
+    "Self",
+    "super",
+    "trait",
+    "type",
+    "unsafe",
+    "use",
+    "where",
+    "yield",
     // Python
-    "and", "assert", "def", "del", "elif", "except", "finally", "from", "global", "import", "is", "lambda",
-    "nonlocal", "not", "or", "pass", "raise", "with", "None", "True", "False",
+    "and",
+    "assert",
+    "def",
+    "del",
+    "elif",
+    "except",
+    "finally",
+    "from",
+    "global",
+    "import",
+    "is",
+    "lambda",
+    "nonlocal",
+    "not",
+    "or",
+    "pass",
+    "raise",
+    "with",
+    "None",
+    "True",
+    "False",
 ];
 
 pub fn is_keyword(s: &str) -> bool {
@@ -354,7 +458,8 @@ pub fn is_keyword(s: &str) -> bool {
 /// A valid DBC identifier: `[A-Za-z_][A-Za-z0-9_]*`.
 pub fn is_identifier(s: &str) -> bool {
     let mut c = s.chars();
-    matches!(c.next(), Some(ch) if ch.is_ascii_alphabetic() || ch == '_') && c.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+    matches!(c.next(), Some(ch) if ch.is_ascii_alphabetic() || ch == '_')
+        && c.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
 }
 
 /// Split an identifier into words: `ABSWheelSpeed_FL2` → `ABS`, `Wheel`, `Speed`, `FL2`.
@@ -369,8 +474,12 @@ pub fn split_words(s: &str) -> Vec<String> {
                 let prev = cs[i - 1];
                 let next = cs.get(i + 1).copied();
                 let boundary = (prev.is_ascii_lowercase() && c.is_ascii_uppercase())
-                    || (prev.is_ascii_uppercase() && c.is_ascii_uppercase() && next.is_some_and(|n| n.is_ascii_lowercase()))
-                    || (prev.is_ascii_digit() && c.is_ascii_uppercase() && next.is_some_and(|n| n.is_ascii_lowercase()));
+                    || (prev.is_ascii_uppercase()
+                        && c.is_ascii_uppercase()
+                        && next.is_some_and(|n| n.is_ascii_lowercase()))
+                    || (prev.is_ascii_digit()
+                        && c.is_ascii_uppercase()
+                        && next.is_some_and(|n| n.is_ascii_lowercase()));
                 if boundary {
                     words.push(std::mem::take(&mut cur));
                 }
@@ -385,7 +494,8 @@ pub fn split_words(s: &str) -> Vec<String> {
 }
 
 fn capitalise(w: &str, keep_acronyms: bool) -> String {
-    let all_upper = w.chars().any(|c| c.is_ascii_alphabetic()) && !w.chars().any(|c| c.is_ascii_lowercase());
+    let all_upper =
+        w.chars().any(|c| c.is_ascii_alphabetic()) && !w.chars().any(|c| c.is_ascii_lowercase());
     if keep_acronyms && all_upper && w.chars().filter(|c| c.is_ascii_alphabetic()).count() <= 3 {
         return w.to_string();
     }
@@ -407,7 +517,10 @@ pub fn to_case(s: &str, case: Case) -> String {
     let keep = !source_upper || words.len() == 1;
     let out = match case {
         Case::Any => return sanitize(s),
-        Case::Pascal => words.iter().map(|w| capitalise(w, keep)).collect::<String>(),
+        Case::Pascal => words
+            .iter()
+            .map(|w| capitalise(w, keep))
+            .collect::<String>(),
         Case::Camel => {
             let mut out = words[0].to_ascii_lowercase();
             for w in &words[1..] {
@@ -415,16 +528,37 @@ pub fn to_case(s: &str, case: Case) -> String {
             }
             out
         }
-        Case::Snake => words.iter().map(|w| w.to_ascii_lowercase()).collect::<Vec<_>>().join("_"),
-        Case::ScreamingSnake => words.iter().map(|w| w.to_ascii_uppercase()).collect::<Vec<_>>().join("_"),
-        Case::PascalSnake => words.iter().map(|w| capitalise(w, keep)).collect::<Vec<_>>().join("_"),
+        Case::Snake => words
+            .iter()
+            .map(|w| w.to_ascii_lowercase())
+            .collect::<Vec<_>>()
+            .join("_"),
+        Case::ScreamingSnake => words
+            .iter()
+            .map(|w| w.to_ascii_uppercase())
+            .collect::<Vec<_>>()
+            .join("_"),
+        Case::PascalSnake => words
+            .iter()
+            .map(|w| capitalise(w, keep))
+            .collect::<Vec<_>>()
+            .join("_"),
     };
     sanitize(&out)
 }
 
 /// Make any string a valid identifier.
 pub fn sanitize(s: &str) -> String {
-    let mut out: String = s.chars().map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' }).collect();
+    let mut out: String = s
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
     if out.is_empty() {
         out.push('_');
     }
@@ -514,11 +648,18 @@ pub fn shorten(name: &str, max: usize, case: Case) -> String {
     }
     let mut words = split_words(name);
     for w in words.iter_mut() {
-        if let Some((_, short)) = ABBREVIATIONS.iter().find(|(long, _)| long.eq_ignore_ascii_case(w)) {
+        if let Some((_, short)) = ABBREVIATIONS
+            .iter()
+            .find(|(long, _)| long.eq_ignore_ascii_case(w))
+        {
             *w = short.to_string();
         }
     }
-    let joined = if matches!(case, Case::Pascal | Case::Camel) { words.concat() } else { words.join("_") };
+    let joined = if matches!(case, Case::Pascal | Case::Camel) {
+        words.concat()
+    } else {
+        words.join("_")
+    };
     let mut out = to_case(&joined, case);
     if out.len() > max {
         out.truncate(max);
@@ -575,9 +716,21 @@ pub fn fix_corners(name: &str) -> String {
     match corner {
         None => name.to_string(),
         Some(c) => {
-            let sep = if name.contains('_') || keep.is_empty() { "_" } else { "" };
-            let base = if name.contains('_') { keep.join("_") } else { keep.concat() };
-            if base.is_empty() { c.to_string() } else { format!("{base}{sep}{c}") }
+            let sep = if name.contains('_') || keep.is_empty() {
+                "_"
+            } else {
+                ""
+            };
+            let base = if name.contains('_') {
+                keep.join("_")
+            } else {
+                keep.concat()
+            };
+            if base.is_empty() {
+                c.to_string()
+            } else {
+                format!("{base}{sep}{c}")
+            }
         }
     }
 }
@@ -600,14 +753,22 @@ pub struct Ctx<'a> {
 fn required_prefix(rule: &Rule, ctx: &Ctx) -> Option<String> {
     match &rule.prefix {
         Prefix::None => None,
-        Prefix::Transmitter => ctx.transmitter.filter(|t| *t != crate::model::NO_NODE).map(|t| format!("{t}_")),
+        Prefix::Transmitter => ctx
+            .transmitter
+            .filter(|t| *t != crate::model::NO_NODE)
+            .map(|t| format!("{t}_")),
         Prefix::MessageName => ctx.message.map(|m| format!("{m}_")),
         Prefix::Literal(p) => Some(p.clone()),
     }
 }
 
 /// Check one name. Returns the reasons it fails and a suggested replacement.
-pub fn check_name(rule: &Rule, name: &str, ctx: &Ctx, corners: bool) -> Option<(Vec<String>, String)> {
+pub fn check_name(
+    rule: &Rule,
+    name: &str,
+    ctx: &Ctx,
+    corners: bool,
+) -> Option<(Vec<String>, String)> {
     let mut reasons = Vec::new();
     let prefix = required_prefix(rule, ctx);
     let body = match &prefix {
@@ -638,7 +799,11 @@ pub fn check_name(rule: &Rule, name: &str, ctx: &Ctx, corners: bool) -> Option<(
     if rule.forbid_keywords && is_keyword(name) {
         reasons.push("is a programming-language keyword".into());
     }
-    let cornered = if corners { fix_corners(body) } else { body.to_string() };
+    let cornered = if corners {
+        fix_corners(body)
+    } else {
+        body.to_string()
+    };
     if corners && cornered != body {
         reasons.push("use a standard FL/FR/RL/RR corner suffix".into());
     }
@@ -663,7 +828,9 @@ pub fn check_name(rule: &Rule, name: &str, ctx: &Ctx, corners: bool) -> Option<(
     }
     if let Some(max) = rule.max_len {
         s = match &prefix {
-            Some(p) if p.len() < max => format!("{p}{}", shorten(&s[p.len()..], max - p.len(), rule.case)),
+            Some(p) if p.len() < max => {
+                format!("{p}{}", shorten(&s[p.len()..], max - p.len(), rule.case))
+            }
             _ => shorten(&s, max, rule.case),
         };
     }
@@ -678,45 +845,99 @@ pub fn check_name(rule: &Rule, name: &str, ctx: &Ctx, corners: bool) -> Option<(
 }
 
 fn msg_ctx(m: &Message) -> Ctx<'_> {
-    Ctx { transmitter: Some(m.transmitter.as_str()), message: Some(m.name.as_str()) }
+    Ctx {
+        transmitter: Some(m.transmitter.as_str()),
+        message: Some(m.name.as_str()),
+    }
 }
 
 /// Check every name in a file against a convention.
 pub fn check_dbc(dbc: &Dbc, conv: &Convention) -> Vec<NamingIssue> {
     let mut out = Vec::new();
-    let none = Ctx { transmitter: None, message: None };
-    fn push(out: &mut Vec<NamingIssue>, target: Target, entity: Entity, name: &str, r: Option<(Vec<String>, String)>) {
+    let none = Ctx {
+        transmitter: None,
+        message: None,
+    };
+    fn push(
+        out: &mut Vec<NamingIssue>,
+        target: Target,
+        entity: Entity,
+        name: &str,
+        r: Option<(Vec<String>, String)>,
+    ) {
         if let Some((reasons, suggestion)) = r {
-            out.push(NamingIssue { target, entity, name: name.to_string(), reasons, suggestion });
+            out.push(NamingIssue {
+                target,
+                entity,
+                name: name.to_string(),
+                reasons,
+                suggestion,
+            });
         }
     }
     for n in &dbc.nodes {
-        push(&mut out, Target::Node(n.name.clone()), Entity::Node, &n.name, check_name(&conv.node, &n.name, &none, false));
+        push(
+            &mut out,
+            Target::Node(n.name.clone()),
+            Entity::Node,
+            &n.name,
+            check_name(&conv.node, &n.name, &none, false),
+        );
     }
     for m in &dbc.messages {
         if m.is_pseudo() {
             continue;
         }
         let ctx = msg_ctx(m);
-        push(&mut out, Target::Message(m.id), Entity::Message, &m.name, check_name(&conv.message, &m.name, &ctx, false));
+        push(
+            &mut out,
+            Target::Message(m.id),
+            Entity::Message,
+            &m.name,
+            check_name(&conv.message, &m.name, &ctx, false),
+        );
         for s in &m.signals {
             let t = Target::Signal(m.id, s.name.clone());
-            push(&mut out, t, Entity::Signal, &s.name, check_name(&conv.signal, &s.name, &ctx, conv.corner_suffixes));
+            push(
+                &mut out,
+                t,
+                Entity::Signal,
+                &s.name,
+                check_name(&conv.signal, &s.name, &ctx, conv.corner_suffixes),
+            );
             if let Some(rule) = &conv.enum_label {
                 for e in &s.value_descriptions {
                     let t = Target::ValueLabel(m.id, s.name.clone(), e.value);
-                    push(&mut out, t, Entity::EnumLabel, &e.label, check_name(rule, &e.label, &none, false));
+                    push(
+                        &mut out,
+                        t,
+                        Entity::EnumLabel,
+                        &e.label,
+                        check_name(rule, &e.label, &none, false),
+                    );
                 }
             }
         }
     }
     for v in &dbc.value_tables {
         let t = Target::ValueTable(v.name.clone());
-        push(&mut out, t, Entity::ValueTable, &v.name, check_name(&conv.value_table, &v.name, &none, false));
+        push(
+            &mut out,
+            t,
+            Entity::ValueTable,
+            &v.name,
+            check_name(&conv.value_table, &v.name, &none, false),
+        );
     }
     for e in &dbc.env_vars {
         let t = Target::EnvVar(e.name.clone());
-        push(&mut out, t, Entity::EnvVar, &e.name, check_name(&conv.env_var, &e.name, &none, false));
+        push(
+            &mut out,
+            t,
+            Entity::EnvVar,
+            &e.name,
+            check_name(&conv.env_var, &e.name, &none, false),
+        );
     }
     dedupe_suggestions(dbc, &mut out);
     out
@@ -746,7 +967,11 @@ fn dedupe_suggestions(dbc: &Dbc, issues: &mut [NamingIssue]) {
         let mut candidate = i.suggestion.clone();
         let mut k = 2;
         while taken.contains(&format!("{scope}{candidate}")) {
-            candidate = format!("{}{}{k}", i.suggestion, if i.suggestion.contains('_') { "_" } else { "" });
+            candidate = format!(
+                "{}{}{k}",
+                i.suggestion,
+                if i.suggestion.contains('_') { "_" } else { "" }
+            );
             k += 1;
         }
         i.suggestion = candidate.clone();

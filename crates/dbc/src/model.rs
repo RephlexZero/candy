@@ -55,7 +55,10 @@ pub struct ValueEntry {
 
 impl ValueEntry {
     pub fn new(value: i64, label: impl Into<String>) -> Self {
-        Self { value, label: label.into() }
+        Self {
+            value,
+            label: label.into(),
+        }
     }
 }
 
@@ -100,7 +103,11 @@ impl Message {
     }
 
     pub fn set_can_id(&mut self, can_id: u32, extended: bool) {
-        self.id = if extended { (can_id & 0x1FFF_FFFF) | EXTENDED_FLAG } else { can_id & 0x7FF };
+        self.id = if extended {
+            (can_id & 0x1FFF_FFFF) | EXTENDED_FLAG
+        } else {
+            can_id & 0x7FF
+        };
     }
 
     pub fn is_pseudo(&self) -> bool {
@@ -116,12 +123,17 @@ impl Message {
     }
 
     pub fn attribute(&self, name: &str) -> Option<&AttrValue> {
-        self.attributes.iter().find(|a| a.name == name).map(|a| &a.value)
+        self.attributes
+            .iter()
+            .find(|a| a.name == name)
+            .map(|a| &a.value)
     }
 
     /// The (first) multiplexor switch signal, if any.
     pub fn multiplexor(&self) -> Option<&Signal> {
-        self.signals.iter().find(|s| matches!(s.mux, Mux::Multiplexor))
+        self.signals
+            .iter()
+            .find(|s| matches!(s.mux, Mux::Multiplexor))
     }
 
     pub fn is_multiplexed(&self) -> bool {
@@ -138,7 +150,8 @@ impl Message {
     }
 
     pub fn j1939(&self) -> Option<J1939Id> {
-        self.is_extended().then(|| J1939Id::from_can_id(self.can_id()))
+        self.is_extended()
+            .then(|| J1939Id::from_can_id(self.can_id()))
     }
 }
 
@@ -160,9 +173,19 @@ impl J1939Id {
         let dp_edp = (id >> 24) & 0x3;
         let source = (id & 0xFF) as u8;
         if pf < 240 {
-            Self { priority, pgn: (dp_edp << 16) | (pf << 8), source, destination: Some(ps) }
+            Self {
+                priority,
+                pgn: (dp_edp << 16) | (pf << 8),
+                source,
+                destination: Some(ps),
+            }
         } else {
-            Self { priority, pgn: (dp_edp << 16) | (pf << 8) | ps as u32, source, destination: None }
+            Self {
+                priority,
+                pgn: (dp_edp << 16) | (pf << 8) | ps as u32,
+                source,
+                destination: None,
+            }
         }
     }
 }
@@ -300,15 +323,25 @@ impl Signal {
     }
 
     pub fn to_raw(&self, physical: f64) -> f64 {
-        if self.factor == 0.0 { 0.0 } else { (physical - self.offset) / self.factor }
+        if self.factor == 0.0 {
+            0.0
+        } else {
+            (physical - self.offset) / self.factor
+        }
     }
 
     pub fn value_label(&self, raw: i64) -> Option<&str> {
-        self.value_descriptions.iter().find(|e| e.value == raw).map(|e| e.label.as_str())
+        self.value_descriptions
+            .iter()
+            .find(|e| e.value == raw)
+            .map(|e| e.label.as_str())
     }
 
     pub fn attribute(&self, name: &str) -> Option<&AttrValue> {
-        self.attributes.iter().find(|a| a.name == name).map(|a| &a.value)
+        self.attributes
+            .iter()
+            .find(|a| a.name == name)
+            .map(|a| &a.value)
     }
 
     /// Human-readable scaling formula, e.g. `phys = raw × 0.1 − 40`.
@@ -381,7 +414,10 @@ impl AttrObject {
         }
     }
     pub fn is_relation(self) -> bool {
-        matches!(self, AttrObject::NodeMessage | AttrObject::NodeSignal | AttrObject::NodeEnvVar)
+        matches!(
+            self,
+            AttrObject::NodeMessage | AttrObject::NodeSignal | AttrObject::NodeEnvVar
+        )
     }
     pub fn label(self) -> &'static str {
         match self {
@@ -471,7 +507,10 @@ pub struct Attribute {
 
 impl Attribute {
     pub fn new(name: impl Into<String>, value: AttrValue) -> Self {
-        Self { name: name.into(), value }
+        Self {
+            name: name.into(),
+            value,
+        }
     }
 }
 
@@ -498,7 +537,10 @@ pub fn fmt_num(v: f64) -> String {
 impl Dbc {
     pub fn new() -> Self {
         Self {
-            new_symbols: crate::writer::DEFAULT_NEW_SYMBOLS.iter().map(|s| s.to_string()).collect(),
+            new_symbols: crate::writer::DEFAULT_NEW_SYMBOLS
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
             ..Default::default()
         }
     }
@@ -524,21 +566,31 @@ impl Dbc {
     }
 
     pub fn attr_default(&self, name: &str) -> Option<&AttrValue> {
-        self.attr_defaults.iter().find(|d| d.name == name).map(|d| &d.value)
+        self.attr_defaults
+            .iter()
+            .find(|d| d.name == name)
+            .map(|d| &d.value)
     }
 
     pub fn network_attribute(&self, name: &str) -> Option<&AttrValue> {
-        self.attributes.iter().find(|a| a.name == name).map(|a| &a.value)
+        self.attributes
+            .iter()
+            .find(|a| a.name == name)
+            .map(|a| &a.value)
     }
 
     /// Effective attribute on a message: explicit value, else the declared default.
     pub fn message_attr(&self, msg: &Message, name: &str) -> Option<AttrValue> {
-        msg.attribute(name).cloned().or_else(|| self.attr_default(name).cloned())
+        msg.attribute(name)
+            .cloned()
+            .or_else(|| self.attr_default(name).cloned())
     }
 
     /// Cycle time in ms from `GenMsgCycleTime`, if set and non-zero.
     pub fn cycle_time_ms(&self, msg: &Message) -> Option<f64> {
-        self.message_attr(msg, "GenMsgCycleTime").and_then(|v| v.as_f64()).filter(|v| *v > 0.0)
+        self.message_attr(msg, "GenMsgCycleTime")
+            .and_then(|v| v.as_f64())
+            .filter(|v| *v > 0.0)
     }
 
     /// Resolve an enum attribute value (stored as an index) to its label.
@@ -658,10 +710,24 @@ impl Dbc {
     }
 
     /// Ensure an attribute definition exists (used for CANdy's own metadata attributes).
-    pub fn ensure_attr_def(&mut self, object: AttrObject, name: &str, kind: AttrKind, default: AttrValue) {
+    pub fn ensure_attr_def(
+        &mut self,
+        object: AttrObject,
+        name: &str,
+        kind: AttrKind,
+        default: AttrValue,
+    ) {
         if self.attr_def(name).is_none() {
-            self.attr_defs.push(AttrDef { object, name: name.into(), kind });
-            self.attr_defaults.push(AttrDefault { name: name.into(), value: default, relation: false });
+            self.attr_defs.push(AttrDef {
+                object,
+                name: name.into(),
+                kind,
+            });
+            self.attr_defaults.push(AttrDefault {
+                name: name.into(),
+                value: default,
+                relation: false,
+            });
         }
     }
 }

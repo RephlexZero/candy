@@ -1,7 +1,7 @@
 //! Decoding and encoding frames, plus parsers for common CAN log formats.
 
 use crate::layout::signal_bits;
-use crate::model::{Dbc, Message, Mux, Signal, ValueType, EXTENDED_FLAG};
+use crate::model::{Dbc, EXTENDED_FLAG, Message, Mux, Signal, ValueType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DecodedSignal {
@@ -20,7 +20,8 @@ pub struct DecodedSignal {
 }
 
 fn get_bit(data: &[u8], pos: u32) -> bool {
-    data.get((pos / 8) as usize).is_some_and(|b| b >> (pos % 8) & 1 == 1)
+    data.get((pos / 8) as usize)
+        .is_some_and(|b| b >> (pos % 8) & 1 == 1)
 }
 
 fn set_bit(data: &mut [u8], pos: u32, v: bool) {
@@ -105,8 +106,13 @@ pub fn decode_message(msg: &Message, data: &[u8]) -> Vec<DecodedSignal> {
             let raw = raws[i];
             let raw_value = raw_to_value(s, raw);
             let physical = s.to_physical(raw_value);
-            let label = if s.value_type.is_float() { None } else { s.value_label(raw_value as i64).map(String::from) };
-            let in_range = (s.min == 0.0 && s.max == 0.0) || (physical >= s.min - 1e-9 && physical <= s.max + 1e-9);
+            let label = if s.value_type.is_float() {
+                None
+            } else {
+                s.value_label(raw_value as i64).map(String::from)
+            };
+            let in_range = (s.min == 0.0 && s.max == 0.0)
+                || (physical >= s.min - 1e-9 && physical <= s.max + 1e-9);
             DecodedSignal {
                 name: s.name.clone(),
                 raw,
@@ -133,7 +139,11 @@ fn is_active(msg: &Message, idx: usize, raws: &[u64], depth: usize) -> bool {
             None => return false,
         }
     } else if let Some(v) = s.mux.selector() {
-        match msg.signals.iter().position(|x| matches!(x.mux, Mux::Multiplexor)) {
+        match msg
+            .signals
+            .iter()
+            .position(|x| matches!(x.mux, Mux::Multiplexor))
+        {
             Some(p) => (p, vec![(v, v)]),
             None => return false,
         }
@@ -144,7 +154,8 @@ fn is_active(msg: &Message, idx: usize, raws: &[u64], depth: usize) -> bool {
         return true;
     }
     let sel = raws[switch_idx];
-    ranges.iter().any(|(lo, hi)| (*lo..=*hi).contains(&sel)) && is_active(msg, switch_idx, raws, depth + 1)
+    ranges.iter().any(|(lo, hi)| (*lo..=*hi).contains(&sel))
+        && is_active(msg, switch_idx, raws, depth + 1)
 }
 
 /// One frame read from a log or typed by the user.
@@ -160,7 +171,11 @@ pub struct Frame {
 impl Frame {
     /// Raw DBC id used to look the message up.
     pub fn dbc_id(&self) -> u32 {
-        if self.extended { self.id | EXTENDED_FLAG } else { self.id }
+        if self.extended {
+            self.id | EXTENDED_FLAG
+        } else {
+            self.id
+        }
     }
 }
 
@@ -172,17 +187,26 @@ pub fn find_message<'a>(dbc: &'a Dbc, frame: &Frame) -> Option<&'a Message> {
     }
     if frame.extended {
         let key = |id: u32| (id >> 8) & 0x3FFFF;
-        return dbc.messages.iter().find(|m| m.is_extended() && key(m.can_id()) == key(frame.id));
+        return dbc
+            .messages
+            .iter()
+            .find(|m| m.is_extended() && key(m.can_id()) == key(frame.id));
     }
     None
 }
 
 fn hex_bytes(s: &str) -> Option<Vec<u8>> {
-    let clean: String = s.chars().filter(|c| !c.is_whitespace() && *c != '.' && *c != ',').collect();
-    if clean.len() % 2 != 0 || clean.len() > 128 {
+    let clean: String = s
+        .chars()
+        .filter(|c| !c.is_whitespace() && *c != '.' && *c != ',')
+        .collect();
+    if !clean.len().is_multiple_of(2) || clean.len() > 128 {
         return None;
     }
-    (0..clean.len()).step_by(2).map(|i| u8::from_str_radix(&clean[i..i + 2], 16).ok()).collect()
+    (0..clean.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&clean[i..i + 2], 16).ok())
+        .collect()
 }
 
 fn parse_id(s: &str) -> Option<(u32, bool)> {
@@ -218,22 +242,42 @@ pub fn parse_line(line: &str) -> Option<Frame> {
     // `ID#DATA` (candump -L / cansend syntax); `##` marks CAN FD with a flags nibble.
     if let Some(tok) = rest.split_whitespace().find(|t| t.contains('#')) {
         let (id_s, data_s) = tok.split_once('#')?;
-        let data_s = if let Some(fd) = data_s.strip_prefix('#') { fd.get(1..).unwrap_or("") } else { data_s };
+        let data_s = if let Some(fd) = data_s.strip_prefix('#') {
+            fd.get(1..).unwrap_or("")
+        } else {
+            data_s
+        };
         let (id, ext) = parse_id(id_s)?;
-        let data = if data_s.starts_with('R') { Vec::new() } else { hex_bytes(data_s)? };
-        return Some(Frame { id, extended: ext, data, timestamp });
+        let data = if data_s.starts_with('R') {
+            Vec::new()
+        } else {
+            hex_bytes(data_s)?
+        };
+        return Some(Frame {
+            id,
+            extended: ext,
+            data,
+            timestamp,
+        });
     }
 
     let toks: Vec<&str> = rest.split_whitespace().collect();
 
     // candump default: `can0  1A0   [4]  DE AD BE EF`
-    if let Some(p) = toks.iter().position(|t| t.starts_with('[') && t.ends_with(']')) {
-        if p >= 1 {
-            let (id, ext) = parse_id(toks[p - 1])?;
-            let n: usize = toks[p].trim_matches(['[', ']']).parse().ok()?;
-            let data = hex_bytes(&toks[p + 1..].iter().take(n).copied().collect::<String>())?;
-            return Some(Frame { id, extended: ext, data, timestamp });
-        }
+    if let Some(p) = toks
+        .iter()
+        .position(|t| t.starts_with('[') && t.ends_with(']'))
+        && p >= 1
+    {
+        let (id, ext) = parse_id(toks[p - 1])?;
+        let n: usize = toks[p].trim_matches(['[', ']']).parse().ok()?;
+        let data = hex_bytes(&toks[p + 1..].iter().take(n).copied().collect::<String>())?;
+        return Some(Frame {
+            id,
+            extended: ext,
+            data,
+            timestamp,
+        });
     }
 
     // Vector ASC: `t chan id dir d len bytes…`
@@ -245,25 +289,45 @@ pub fn parse_line(line: &str) -> Option<Frame> {
         let n: usize = toks.get(p + 1)?.parse().ok()?;
         let data = hex_bytes(&toks[p + 2..].iter().take(n).copied().collect::<String>())?;
         let ts = toks.first().and_then(|t| t.parse().ok());
-        return Some(Frame { id, extended: ext, data, timestamp: timestamp.or(ts) });
+        return Some(Frame {
+            id,
+            extended: ext,
+            data,
+            timestamp: timestamp.or(ts),
+        });
     }
 
     // PCAN TRC: `N)  time  Rx|Tx  ID  len  bytes…`
     if toks.first().is_some_and(|t| t.ends_with(')'))
-        && let Some(p) = toks.iter().position(|t| t.eq_ignore_ascii_case("rx") || t.eq_ignore_ascii_case("tx"))
+        && let Some(p) = toks
+            .iter()
+            .position(|t| t.eq_ignore_ascii_case("rx") || t.eq_ignore_ascii_case("tx"))
     {
         let (id, ext) = parse_id(toks.get(p + 1)?)?;
         let n: usize = toks.get(p + 2)?.parse().ok()?;
         let data = hex_bytes(&toks[p + 3..].iter().take(n).copied().collect::<String>())?;
-        let ts = toks.get(1).and_then(|t| t.parse::<f64>().ok()).map(|ms| ms / 1000.0);
-        return Some(Frame { id, extended: ext || toks[p + 1].len() > 4, data, timestamp: ts });
+        let ts = toks
+            .get(1)
+            .and_then(|t| t.parse::<f64>().ok())
+            .map(|ms| ms / 1000.0);
+        return Some(Frame {
+            id,
+            extended: ext || toks[p + 1].len() > 4,
+            data,
+            timestamp: ts,
+        });
     }
 
     // Bare: `ID data…` or `ID: data…`
     let first = toks.first()?.trim_end_matches(':');
     let (id, ext) = parse_id(first)?;
     let data = hex_bytes(&toks[1..].concat())?;
-    Some(Frame { id, extended: ext, data, timestamp })
+    Some(Frame {
+        id,
+        extended: ext,
+        data,
+        timestamp,
+    })
 }
 
 pub fn parse_log(text: &str) -> Vec<Frame> {

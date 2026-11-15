@@ -54,7 +54,11 @@ fn attr_value(v: &AttrValue) -> String {
         AttrValue::Float(f) => {
             let s = fmt_num(*f);
             // Keep floats recognisable as floats so they parse back the same way.
-            if s.contains(['.', 'e', 'E']) { s } else { format!("{s}.0") }
+            if s.contains(['.', 'e', 'E']) {
+                s
+            } else {
+                format!("{s}.0")
+            }
         }
         AttrValue::Str(s) => quote(s),
     }
@@ -80,14 +84,22 @@ pub fn signal_line(s: &Signal) -> String {
         mux,
         s.start_bit,
         s.size,
-        if s.byte_order == ByteOrder::LittleEndian { '1' } else { '0' },
+        if s.byte_order == ByteOrder::LittleEndian {
+            '1'
+        } else {
+            '0'
+        },
         if s.value_type.is_signed() { '-' } else { '+' },
         fmt_num(s.factor),
         fmt_num(s.offset),
         fmt_num(s.min),
         fmt_num(s.max),
         quote(&s.unit),
-        if s.receivers.is_empty() { NO_NODE.to_string() } else { s.receivers.join(",") },
+        if s.receivers.is_empty() {
+            NO_NODE.to_string()
+        } else {
+            s.receivers.join(",")
+        },
     )
 }
 
@@ -98,7 +110,15 @@ pub fn write(d: &Dbc) -> String {
     for s in &d.new_symbols {
         let _ = writeln!(o, "\t{s}");
     }
-    let _ = writeln!(o, "\nBS_:{}", if d.bit_timing.is_empty() { String::new() } else { format!(" {}", d.bit_timing) });
+    let _ = writeln!(
+        o,
+        "\nBS_:{}",
+        if d.bit_timing.is_empty() {
+            String::new()
+        } else {
+            format!(" {}", d.bit_timing)
+        }
+    );
     let names: Vec<&str> = d.nodes.iter().map(|n| n.name.as_str()).collect();
     let _ = writeln!(o, "\nBU_: {}", names.join(" "));
     for vt in &d.value_tables {
@@ -116,7 +136,12 @@ pub fn write(d: &Dbc) -> String {
 
     for m in &d.messages {
         if !m.extra_transmitters.is_empty() {
-            let _ = writeln!(o, "BO_TX_BU_ {} : {};", m.id, m.extra_transmitters.join(","));
+            let _ = writeln!(
+                o,
+                "BO_TX_BU_ {} : {};",
+                m.id,
+                m.extra_transmitters.join(",")
+            );
         }
     }
 
@@ -132,7 +157,11 @@ pub fn write(d: &Dbc) -> String {
             fmt_num(e.initial),
             e.ev_id,
             e.access,
-            if e.nodes.is_empty() { NO_NODE.to_string() } else { e.nodes.join(",") }
+            if e.nodes.is_empty() {
+                NO_NODE.to_string()
+            } else {
+                e.nodes.join(",")
+            }
         );
     }
     for e in &d.env_vars {
@@ -174,19 +203,38 @@ pub fn write(d: &Dbc) -> String {
             AttrKind::Float { min, max } => format!("FLOAT {} {}", fmt_num(*min), fmt_num(*max)),
             AttrKind::String => "STRING ".into(),
             AttrKind::Enum(opts) => {
-                format!("ENUM  {}", opts.iter().map(|s| quote(s)).collect::<Vec<_>>().join(","))
+                format!(
+                    "ENUM  {}",
+                    opts.iter().map(|s| quote(s)).collect::<Vec<_>>().join(",")
+                )
             }
         };
         if a.object.is_relation() {
-            let _ = writeln!(o, "BA_DEF_REL_ {}  {} {};", a.object.keyword(), quote(&a.name), kind);
+            let _ = writeln!(
+                o,
+                "BA_DEF_REL_ {}  {} {};",
+                a.object.keyword(),
+                quote(&a.name),
+                kind
+            );
         } else if a.object == AttrObject::Network {
             let _ = writeln!(o, "BA_DEF_  {} {};", quote(&a.name), kind);
         } else {
-            let _ = writeln!(o, "BA_DEF_ {}  {} {};", a.object.keyword(), quote(&a.name), kind);
+            let _ = writeln!(
+                o,
+                "BA_DEF_ {}  {} {};",
+                a.object.keyword(),
+                quote(&a.name),
+                kind
+            );
         }
     }
     for a in &d.attr_defaults {
-        let kw = if a.relation { "BA_DEF_DEF_REL_" } else { "BA_DEF_DEF_" };
+        let kw = if a.relation {
+            "BA_DEF_DEF_REL_"
+        } else {
+            "BA_DEF_DEF_"
+        };
         let _ = writeln!(o, "{kw}  {} {};", quote(&a.name), attr_value(&a.value));
     }
 
@@ -196,22 +244,47 @@ pub fn write(d: &Dbc) -> String {
     }
     for n in &d.nodes {
         for a in &n.attributes {
-            let _ = writeln!(o, "BA_ {} BU_ {} {};", quote(&a.name), n.name, attr_value(&a.value));
+            let _ = writeln!(
+                o,
+                "BA_ {} BU_ {} {};",
+                quote(&a.name),
+                n.name,
+                attr_value(&a.value)
+            );
         }
     }
     for m in &d.messages {
         for a in &m.attributes {
-            let _ = writeln!(o, "BA_ {} BO_ {} {};", quote(&a.name), m.id, attr_value(&a.value));
+            let _ = writeln!(
+                o,
+                "BA_ {} BO_ {} {};",
+                quote(&a.name),
+                m.id,
+                attr_value(&a.value)
+            );
         }
         for s in &m.signals {
             for a in &s.attributes {
-                let _ = writeln!(o, "BA_ {} SG_ {} {} {};", quote(&a.name), m.id, s.name, attr_value(&a.value));
+                let _ = writeln!(
+                    o,
+                    "BA_ {} SG_ {} {} {};",
+                    quote(&a.name),
+                    m.id,
+                    s.name,
+                    attr_value(&a.value)
+                );
             }
         }
     }
     for e in &d.env_vars {
         for a in &e.attributes {
-            let _ = writeln!(o, "BA_ {} EV_ {} {};", quote(&a.name), e.name, attr_value(&a.value));
+            let _ = writeln!(
+                o,
+                "BA_ {} EV_ {} {};",
+                quote(&a.name),
+                e.name,
+                attr_value(&a.value)
+            );
         }
     }
 
@@ -223,7 +296,13 @@ pub fn write(d: &Dbc) -> String {
     for m in &d.messages {
         for s in &m.signals {
             if !s.value_descriptions.is_empty() {
-                let _ = writeln!(o, "VAL_ {} {}{} ;", m.id, s.name, values(&s.value_descriptions));
+                let _ = writeln!(
+                    o,
+                    "VAL_ {} {}{} ;",
+                    m.id,
+                    s.name,
+                    values(&s.value_descriptions)
+                );
             }
         }
     }
@@ -234,7 +313,14 @@ pub fn write(d: &Dbc) -> String {
     }
 
     for g in &d.signal_groups {
-        let _ = writeln!(o, "SIG_GROUP_ {} {} {} : {};", g.message_id, g.name, g.repetitions, g.signals.join(" "));
+        let _ = writeln!(
+            o,
+            "SIG_GROUP_ {} {} {} : {};",
+            g.message_id,
+            g.name,
+            g.repetitions,
+            g.signals.join(" ")
+        );
     }
 
     for m in &d.messages {
@@ -251,8 +337,16 @@ pub fn write(d: &Dbc) -> String {
     for m in &d.messages {
         for s in &m.signals {
             for e in &s.ext_mux {
-                let ranges: Vec<String> = e.ranges.iter().map(|(a, b)| format!("{a}-{b}")).collect();
-                let _ = writeln!(o, "SG_MUL_VAL_ {} {} {} {};", m.id, s.name, e.switch, ranges.join(", "));
+                let ranges: Vec<String> =
+                    e.ranges.iter().map(|(a, b)| format!("{a}-{b}")).collect();
+                let _ = writeln!(
+                    o,
+                    "SG_MUL_VAL_ {} {} {} {};",
+                    m.id,
+                    s.name,
+                    e.switch,
+                    ranges.join(", ")
+                );
             }
         }
     }

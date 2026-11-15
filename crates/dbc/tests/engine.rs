@@ -5,9 +5,15 @@ use candy_dbc::naming::{self, Case};
 use candy_dbc::*;
 
 const FIXTURES: &[(&str, &str)] = &[
-    ("motorsport_ecu", include_str!("../../../fixtures/motorsport_ecu.dbc")),
+    (
+        "motorsport_ecu",
+        include_str!("../../../fixtures/motorsport_ecu.dbc"),
+    ),
     ("ev_bms", include_str!("../../../fixtures/ev_bms.dbc")),
-    ("j1939_engine", include_str!("../../../fixtures/j1939_engine.dbc")),
+    (
+        "j1939_engine",
+        include_str!("../../../fixtures/j1939_engine.dbc"),
+    ),
 ];
 
 fn load(name: &str) -> Dbc {
@@ -24,8 +30,15 @@ fn fixtures_parse_cleanly_and_round_trip() {
         assert!(out.errors.is_empty(), "{name}: {:?}", out.errors);
         let written = write(&out.dbc);
         let again = parse(&written);
-        assert!(again.errors.is_empty(), "{name} re-parse: {:?}\n{written}", again.errors);
-        assert_eq!(out.dbc, again.dbc, "{name} changed after a write/parse cycle");
+        assert!(
+            again.errors.is_empty(),
+            "{name} re-parse: {:?}\n{written}",
+            again.errors
+        );
+        assert_eq!(
+            out.dbc, again.dbc,
+            "{name} changed after a write/parse cycle"
+        );
         // Writing is deterministic.
         assert_eq!(written, write(&again.dbc));
     }
@@ -36,15 +49,38 @@ fn model_details() {
     let d = load("ev_bms");
     let cells = d.message(272).unwrap();
     assert_eq!(cells.multiplexor().unwrap().name, "CellGroup");
-    assert_eq!(cells.signal("Cell05_Voltage").unwrap().mux, Mux::Multiplexed(1));
+    assert_eq!(
+        cells.signal("Cell05_Voltage").unwrap().mux,
+        Mux::Multiplexed(1)
+    );
     let diag = d.message(288).unwrap();
-    assert_eq!(diag.signal("DiagSubPage").unwrap().mux, Mux::MultiplexedMultiplexor(1));
-    assert_eq!(diag.signal("FaultCode").unwrap().ext_mux[0].switch, "DiagSubPage");
-    assert_eq!(d.message(512).unwrap().signal("MotorTorque").unwrap().value_type, ValueType::Float32);
-    assert_eq!(d.message(769).unwrap().extra_transmitters, vec!["VCU", "BMS"]);
+    assert_eq!(
+        diag.signal("DiagSubPage").unwrap().mux,
+        Mux::MultiplexedMultiplexor(1)
+    );
+    assert_eq!(
+        diag.signal("FaultCode").unwrap().ext_mux[0].switch,
+        "DiagSubPage"
+    );
+    assert_eq!(
+        d.message(512)
+            .unwrap()
+            .signal("MotorTorque")
+            .unwrap()
+            .value_type,
+        ValueType::Float32
+    );
+    assert_eq!(
+        d.message(769).unwrap().extra_transmitters,
+        vec!["VCU", "BMS"]
+    );
     assert_eq!(d.cycle_time_ms(cells), Some(50.0));
     let chg = d.message(768).unwrap();
-    assert_eq!(d.enum_label("VFrameFormat", chg.attribute("VFrameFormat").unwrap()).as_deref(), Some("StandardCAN_FD"));
+    assert_eq!(
+        d.enum_label("VFrameFormat", chg.attribute("VFrameFormat").unwrap())
+            .as_deref(),
+        Some("StandardCAN_FD")
+    );
 
     let j = load("j1939_engine");
     let eec1 = j.message_by_name("EEC1").unwrap();
@@ -56,7 +92,11 @@ fn model_details() {
 
 #[test]
 fn intel_and_motorola_bits() {
-    let mut s = Signal { start_bit: 4, size: 8, ..Default::default() };
+    let mut s = Signal {
+        start_bit: 4,
+        size: 8,
+        ..Default::default()
+    };
     assert_eq!(signal_bits(&s), (4..12).collect::<Vec<_>>());
     s.byte_order = ByteOrder::BigEndian;
     s.start_bit = 7;
@@ -123,12 +163,25 @@ fn encode_decode_round_trip_every_signal() {
         for m in &d.messages {
             for s in &m.signals {
                 let mut buf = vec![0u8; m.size as usize];
-                let target = if s.max > s.min { (s.min + s.max) / 2.0 } else { s.offset };
+                let target = if s.max > s.min {
+                    (s.min + s.max) / 2.0
+                } else {
+                    s.offset
+                };
                 encode_physical(s, &mut buf, target);
                 let raw = decode::extract_raw(s, &buf);
                 let back = s.to_physical(decode::raw_to_value(s, raw));
-                let tol = if s.value_type.is_float() { 1e-3 * target.abs().max(1.0) } else { s.factor.abs() };
-                assert!((back - target).abs() <= tol, "{name}/{}.{}: {target} → {back}", m.name, s.name);
+                let tol = if s.value_type.is_float() {
+                    1e-3 * target.abs().max(1.0)
+                } else {
+                    s.factor.abs()
+                };
+                assert!(
+                    (back - target).abs() <= tol,
+                    "{name}/{}.{}: {target} → {back}",
+                    m.name,
+                    s.name
+                );
             }
         }
     }
@@ -137,7 +190,10 @@ fn encode_decode_round_trip_every_signal() {
 #[test]
 fn log_formats() {
     let f = parse_line("(1699999999.123456) can0 1A0#DEADBEEF").unwrap();
-    assert_eq!((f.id, f.extended, f.data.clone()), (0x1A0, false, vec![0xDE, 0xAD, 0xBE, 0xEF]));
+    assert_eq!(
+        (f.id, f.extended, f.data.clone()),
+        (0x1A0, false, vec![0xDE, 0xAD, 0xBE, 0xEF])
+    );
     assert_eq!(f.timestamp, Some(1699999999.123456));
     let f = parse_line("  can0  18FEF100   [8]  00 01 02 03 04 05 06 07").unwrap();
     assert!(f.extended);
@@ -168,7 +224,10 @@ fn error_tolerance() {
     assert_eq!(out.errors.len(), 1, "{:?}", out.errors);
     assert_eq!(out.errors[0].line, 5);
     assert_eq!(out.dbc.messages.len(), 2);
-    assert_eq!(out.dbc.message(2).unwrap().comment.as_deref(), Some("still parsed"));
+    assert_eq!(
+        out.dbc.message(2).unwrap().comment.as_deref(),
+        Some("still parsed")
+    );
     assert_eq!(out.dbc.extra, vec!["GARBAGE_ here;"]);
 }
 
@@ -186,7 +245,16 @@ fn lint_finds_and_fixes() {
     let mut d = parse(src).dbc;
     let issues = lint::lint(&d, None);
     let rules: Vec<&str> = issues.iter().map(|i| i.rule).collect();
-    for r in ["duplicate-id", "signal-overlap", "zero-factor", "range-inverted", "signal-outside-payload", "payload-size", "unknown-node", "unused-node"] {
+    for r in [
+        "duplicate-id",
+        "signal-overlap",
+        "zero-factor",
+        "range-inverted",
+        "signal-outside-payload",
+        "payload-size",
+        "unknown-node",
+        "unused-node",
+    ] {
         assert!(rules.contains(&r), "missing {r} in {rules:?}");
     }
     let n = lint::fix_all(&mut d, &issues, None);
@@ -201,24 +269,44 @@ fn clean_fixtures_have_no_errors() {
         let d = load(name);
         let conv = naming::from_dbc(&d);
         let issues = lint::lint(&d, conv.as_ref());
-        let errors: Vec<_> = issues.iter().filter(|i| i.severity == lint::Severity::Error).collect();
+        let errors: Vec<_> = issues
+            .iter()
+            .filter(|i| i.severity == lint::Severity::Error)
+            .collect();
         assert!(errors.is_empty(), "{name}: {errors:#?}");
     }
 }
 
 #[test]
 fn naming_conventions() {
-    assert_eq!(naming::split_words("ABSWheelSpeed_FL2"), vec!["ABS", "Wheel", "Speed", "FL2"]);
+    assert_eq!(
+        naming::split_words("ABSWheelSpeed_FL2"),
+        vec!["ABS", "Wheel", "Speed", "FL2"]
+    );
     assert_eq!(naming::to_case("engine_speed", Case::Pascal), "EngineSpeed");
     assert_eq!(naming::to_case("EngineSpeed", Case::Snake), "engine_speed");
     assert_eq!(naming::to_case("ENGINE_SPEED", Case::Camel), "engineSpeed");
-    assert_eq!(naming::to_case("WhlSpeedFL", Case::PascalSnake), "Whl_Speed_FL");
-    assert_eq!(naming::to_case("ABSStatus", Case::ScreamingSnake), "ABS_STATUS");
+    assert_eq!(
+        naming::to_case("WhlSpeedFL", Case::PascalSnake),
+        "Whl_Speed_FL"
+    );
+    assert_eq!(
+        naming::to_case("ABSStatus", Case::ScreamingSnake),
+        "ABS_STATUS"
+    );
     assert!(Case::PascalSnake.matches("Eng_Data_1"));
     assert!(!Case::PascalSnake.matches("Eng_data"));
     assert_eq!(naming::fix_corners("Tyre_Temp_LeftFront"), "Tyre_Temp_FL");
     assert_eq!(naming::fix_corners("WheelSpeedFrontRight"), "WheelSpeedFR");
-    assert_eq!(naming::shorten("Battery_Temperature_Maximum_Value_Front", 32, Case::PascalSnake).len() <= 32, true);
+    assert!(
+        naming::shorten(
+            "Battery_Temperature_Maximum_Value_Front",
+            32,
+            Case::PascalSnake
+        )
+        .len()
+            <= 32
+    );
 
     let d = load("motorsport_ecu");
     let conv = naming::from_dbc(&d).unwrap();
@@ -229,7 +317,13 @@ fn naming_conventions() {
 
     // Applying a rename fix cascades.
     let mut d = d;
-    lint::apply_fix(&mut d, &Fix::Rename { target: Target::Signal(1618, "Tyre_Temp_LeftFront".into()), new_name: "Tyre_Temp_FL".into() });
+    lint::apply_fix(
+        &mut d,
+        &Fix::Rename {
+            target: Target::Signal(1618, "Tyre_Temp_LeftFront".into()),
+            new_name: "Tyre_Temp_FL".into(),
+        },
+    );
     assert!(naming::check_dbc(&d, &conv).is_empty());
 
     // Snake preset on the J1939 file proposes valid, unique names.
@@ -246,7 +340,11 @@ fn naming_conventions() {
     custom.id = "custom".into();
     custom.signal.max_len = Some(20);
     let mut j2 = j.clone();
-    set_attribute(&mut j2.attributes, naming::CONVENTION_ATTR, Some(AttrValue::Str(naming::to_attr_string(&custom))));
+    set_attribute(
+        &mut j2.attributes,
+        naming::CONVENTION_ATTR,
+        Some(AttrValue::Str(naming::to_attr_string(&custom))),
+    );
     let j3 = parse_strict(&write(&j2)).unwrap();
     assert_eq!(naming::from_dbc(&j3), Some(custom));
 }
@@ -255,11 +353,25 @@ fn naming_conventions() {
 fn diff_and_merge() {
     let a = load("ev_bms");
     let mut b = a.clone();
-    b.message_mut(256).unwrap().signal_mut("PackVoltage").unwrap().factor = 0.02;
+    b.message_mut(256)
+        .unwrap()
+        .signal_mut("PackVoltage")
+        .unwrap()
+        .factor = 0.02;
     b.remove_message(512);
-    b.nodes.push(Node { name: "DCDC".into(), ..Default::default() });
-    let mut new_msg = Message { id: 0x400, name: "DCDC_Status".into(), ..Default::default() };
-    new_msg.signals.push(Signal { name: "OutV".into(), ..Default::default() });
+    b.nodes.push(Node {
+        name: "DCDC".into(),
+        ..Default::default()
+    });
+    let mut new_msg = Message {
+        id: 0x400,
+        name: "DCDC_Status".into(),
+        ..Default::default()
+    };
+    new_msg.signals.push(Signal {
+        name: "OutV".into(),
+        ..Default::default()
+    });
     b.messages.push(new_msg);
 
     let changes = diff::diff(&a, &b);

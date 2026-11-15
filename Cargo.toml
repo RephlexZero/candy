@@ -13,5 +13,5 @@ authors = ["Jake Stewart"]
 opt-level = "z"
 lto = true
 codegen-units = 1
-strip = true
+strip = "debuginfo"
 panic = "abort"

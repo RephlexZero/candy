@@ -1,0 +1,7 @@
+[build]
+target = "crates/app/index.html"
+dist = "dist"
+public_url = "/candy/"
+
+[serve]
+port = 8087

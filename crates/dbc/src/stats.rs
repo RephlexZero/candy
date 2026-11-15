@@ -5,7 +5,11 @@ use crate::model::{Dbc, Message};
 /// Worst-case bits on the wire for one frame, including stuff bits (classic CAN).
 pub fn frame_bits(msg: &Message) -> f64 {
     let payload = (msg.size.min(64) * 8) as f64;
-    let (overhead, stuffable) = if msg.is_extended() { (67.0, 54.0) } else { (47.0, 34.0) };
+    let (overhead, stuffable) = if msg.is_extended() {
+        (67.0, 54.0)
+    } else {
+        (47.0, 34.0)
+    };
     // Stuff bits: one per four bits of the stuffable region, worst case.
     overhead + payload + ((stuffable + payload - 1.0) / 4.0).floor()
 }
@@ -54,5 +58,8 @@ pub fn summary(dbc: &Dbc, bitrate: f64) -> Summary {
 
 /// Bitrate from the `Baudrate` network attribute, defaulting to 500 kbit/s.
 pub fn bitrate(dbc: &Dbc) -> f64 {
-    dbc.network_attribute("Baudrate").and_then(|v| v.as_f64()).filter(|v| *v > 0.0).unwrap_or(500_000.0)
+    dbc.network_attribute("Baudrate")
+        .and_then(|v| v.as_f64())
+        .filter(|v| *v > 0.0)
+        .unwrap_or(500_000.0)
 }

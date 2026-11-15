@@ -35,7 +35,10 @@ pub fn signal_bits(sig: &Signal) -> Vec<u32> {
 /// Least and most significant bit positions.
 pub fn lsb_msb(sig: &Signal) -> (u32, u32) {
     let b = signal_bits(sig);
-    (b.first().copied().unwrap_or(0), b.last().copied().unwrap_or(0))
+    (
+        b.first().copied().unwrap_or(0),
+        b.last().copied().unwrap_or(0),
+    )
 }
 
 /// Number of payload bytes the signal needs to fit.
@@ -70,7 +73,9 @@ pub fn coexist(msg: &Message, a: &Signal, b: &Signal) -> bool {
     let cb = conditions(msg, b);
     for (sw, ra) in &ca {
         if let Some((_, rb)) = cb.iter().find(|(s, _)| s == sw)
-            && !ra.iter().any(|r| rb.iter().any(|q| r.0 <= q.1 && q.0 <= r.1))
+            && !ra
+                .iter()
+                .any(|r| rb.iter().any(|q| r.0 <= q.1 && q.0 <= r.1))
         {
             return false;
         }
@@ -83,7 +88,9 @@ pub fn conditions(msg: &Message, sig: &Signal) -> Vec<(String, Vec<(u64, u64)>)>
     let mut out = Vec::new();
     let mut cur = sig;
     for _ in 0..16 {
-        let Some((sw, ranges)) = active_selectors(msg, cur) else { break };
+        let Some((sw, ranges)) = active_selectors(msg, cur) else {
+            break;
+        };
         if out.iter().any(|(s, _): &(String, _)| *s == sw) || sw == cur.name {
             break;
         }
@@ -103,7 +110,10 @@ pub fn active_selectors(msg: &Message, sig: &Signal) -> Option<(String, Vec<(u64
     }
     let v = sig.mux.selector()?;
     // Simple multiplexing: the parent is the message's top-level switch.
-    let switch = msg.signals.iter().find(|s| matches!(s.mux, Mux::Multiplexor))?;
+    let switch = msg
+        .signals
+        .iter()
+        .find(|s| matches!(s.mux, Mux::Multiplexor))?;
     Some((switch.name.clone(), vec![(v, v)]))
 }
 
@@ -116,7 +126,11 @@ pub fn overlaps(msg: &Message) -> Vec<(usize, usize, Vec<u32>)> {
             if !coexist(msg, &msg.signals[i], &msg.signals[j]) {
                 continue;
             }
-            let common: Vec<u32> = bits[i].iter().filter(|b| bits[j].contains(b)).copied().collect();
+            let common: Vec<u32> = bits[i]
+                .iter()
+                .filter(|b| bits[j].contains(b))
+                .copied()
+                .collect();
             if !common.is_empty() {
                 out.push((i, j, common));
             }
@@ -125,28 +139,36 @@ pub fn overlaps(msg: &Message) -> Vec<(usize, usize, Vec<u32>)> {
     out
 }
 
-/// Distinct mux selector values used in a message (for the branch tabs in the grid).
+/// Distinct values of the top-level switch used in a message (for the branch tabs in the grid).
 pub fn mux_values(msg: &Message) -> Vec<u64> {
+    let Some(top) = msg.multiplexor() else {
+        return Vec::new();
+    };
     let mut v: Vec<u64> = msg
         .signals
         .iter()
-        .flat_map(|s| {
-            if let Some(em) = s.ext_mux.first() {
-                em.ranges.iter().flat_map(|(a, b)| *a..=(*b).min(*a + 255)).collect::<Vec<_>>()
-            } else {
-                s.mux.selector().into_iter().collect()
-            }
+        .filter_map(|s| {
+            conditions(msg, s)
+                .into_iter()
+                .find(|(sw, _)| *sw == top.name)
         })
+        .flat_map(|(_, ranges)| ranges.into_iter().flat_map(|(a, b)| a..=b.min(a + 255)))
         .collect();
     v.sort_unstable();
     v.dedup();
     v
 }
 
-/// Is the signal visible when the top-level switch shows `branch` (None = show all)?
+/// Is the signal present when the top-level switch equals `branch` (None = show all)?
 pub fn in_branch(msg: &Message, sig: &Signal, branch: Option<u64>) -> bool {
     let Some(b) = branch else { return true };
-    match active_selectors(msg, sig) {
+    let Some(top) = msg.multiplexor() else {
+        return true;
+    };
+    match conditions(msg, sig)
+        .into_iter()
+        .find(|(sw, _)| *sw == top.name)
+    {
         None => true,
         Some((_, ranges)) => ranges.iter().any(|(lo, hi)| (*lo..=*hi).contains(&b)),
     }

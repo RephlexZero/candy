@@ -38,11 +38,17 @@ fn opt(s: &Option<String>) -> String {
 }
 
 fn attrs(a: &[Attribute]) -> String {
-    a.iter().map(|a| format!("{}={}", a.name, a.value.display())).collect::<Vec<_>>().join(", ")
+    a.iter()
+        .map(|a| format!("{}={}", a.name, a.value.display()))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn vals(v: &[ValueEntry]) -> String {
-    v.iter().map(|e| format!("{}=\"{}\"", e.value, e.label)).collect::<Vec<_>>().join(", ")
+    v.iter()
+        .map(|e| format!("{}=\"{}\"", e.value, e.label))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn field(out: &mut Vec<(String, String, String)>, name: &str, a: String, b: String) {
@@ -55,20 +61,50 @@ fn message_details(a: &Message, b: &Message) -> Vec<(String, String, String)> {
     let mut d = Vec::new();
     field(&mut d, "name", a.name.clone(), b.name.clone());
     field(&mut d, "length", a.size.to_string(), b.size.to_string());
-    field(&mut d, "transmitter", a.transmitter.clone(), b.transmitter.clone());
-    field(&mut d, "extra transmitters", a.extra_transmitters.join(","), b.extra_transmitters.join(","));
+    field(
+        &mut d,
+        "transmitter",
+        a.transmitter.clone(),
+        b.transmitter.clone(),
+    );
+    field(
+        &mut d,
+        "extra transmitters",
+        a.extra_transmitters.join(","),
+        b.extra_transmitters.join(","),
+    );
     field(&mut d, "comment", opt(&a.comment), opt(&b.comment));
-    field(&mut d, "attributes", attrs(&a.attributes), attrs(&b.attributes));
+    field(
+        &mut d,
+        "attributes",
+        attrs(&a.attributes),
+        attrs(&b.attributes),
+    );
     d
 }
 
 fn signal_details(a: &Signal, b: &Signal) -> Vec<(String, String, String)> {
     let mut d = Vec::new();
     field(&mut d, "definition", signal_line(a), signal_line(b));
-    field(&mut d, "value type", format!("{:?}", a.value_type), format!("{:?}", b.value_type));
+    field(
+        &mut d,
+        "value type",
+        format!("{:?}", a.value_type),
+        format!("{:?}", b.value_type),
+    );
     field(&mut d, "comment", opt(&a.comment), opt(&b.comment));
-    field(&mut d, "attributes", attrs(&a.attributes), attrs(&b.attributes));
-    field(&mut d, "values", vals(&a.value_descriptions), vals(&b.value_descriptions));
+    field(
+        &mut d,
+        "attributes",
+        attrs(&a.attributes),
+        attrs(&b.attributes),
+    );
+    field(
+        &mut d,
+        "values",
+        vals(&a.value_descriptions),
+        vals(&b.value_descriptions),
+    );
     field(
         &mut d,
         "extended mux",
@@ -84,37 +120,77 @@ pub fn diff(left: &Dbc, right: &Dbc) -> Vec<Change> {
 
     // Network.
     let mut nd = Vec::new();
-    field(&mut nd, "version", left.version.clone(), right.version.clone());
+    field(
+        &mut nd,
+        "version",
+        left.version.clone(),
+        right.version.clone(),
+    );
     field(&mut nd, "comment", opt(&left.comment), opt(&right.comment));
-    field(&mut nd, "attributes", attrs(&left.attributes), attrs(&right.attributes));
+    field(
+        &mut nd,
+        "attributes",
+        attrs(&left.attributes),
+        attrs(&right.attributes),
+    );
     if !nd.is_empty() {
-        out.push(Change { kind: ChangeKind::Modified, item: Item::Network, label: "Network".into(), details: nd });
+        out.push(Change {
+            kind: ChangeKind::Modified,
+            item: Item::Network,
+            label: "Network".into(),
+            details: nd,
+        });
     }
 
     // Nodes.
     for n in &right.nodes {
         match left.node(&n.name) {
-            None => out.push(Change { kind: ChangeKind::Added, item: Item::Node(n.name.clone()), label: n.name.clone(), details: vec![] }),
+            None => out.push(Change {
+                kind: ChangeKind::Added,
+                item: Item::Node(n.name.clone()),
+                label: n.name.clone(),
+                details: vec![],
+            }),
             Some(l) => {
                 let mut d = Vec::new();
                 field(&mut d, "comment", opt(&l.comment), opt(&n.comment));
-                field(&mut d, "attributes", attrs(&l.attributes), attrs(&n.attributes));
+                field(
+                    &mut d,
+                    "attributes",
+                    attrs(&l.attributes),
+                    attrs(&n.attributes),
+                );
                 if !d.is_empty() {
-                    out.push(Change { kind: ChangeKind::Modified, item: Item::Node(n.name.clone()), label: n.name.clone(), details: d });
+                    out.push(Change {
+                        kind: ChangeKind::Modified,
+                        item: Item::Node(n.name.clone()),
+                        label: n.name.clone(),
+                        details: d,
+                    });
                 }
             }
         }
     }
     for n in &left.nodes {
         if right.node(&n.name).is_none() {
-            out.push(Change { kind: ChangeKind::Removed, item: Item::Node(n.name.clone()), label: n.name.clone(), details: vec![] });
+            out.push(Change {
+                kind: ChangeKind::Removed,
+                item: Item::Node(n.name.clone()),
+                label: n.name.clone(),
+                details: vec![],
+            });
         }
     }
 
     // Value tables.
     for v in &right.value_tables {
         match left.value_tables.iter().find(|x| x.name == v.name) {
-            None => out.push(Change { kind: ChangeKind::Added, item: Item::ValueTable(v.name.clone()), label: v.name.clone(), details: vec![] }),
+            None => out.push(Change {
+                kind: ChangeKind::Added,
+                item: Item::ValueTable(v.name.clone()),
+                label: v.name.clone(),
+                details: vec![],
+            }),
             Some(l) if l != v => out.push(Change {
                 kind: ChangeKind::Modified,
                 item: Item::ValueTable(v.name.clone()),
@@ -126,30 +202,46 @@ pub fn diff(left: &Dbc, right: &Dbc) -> Vec<Change> {
     }
     for v in &left.value_tables {
         if !right.value_tables.iter().any(|x| x.name == v.name) {
-            out.push(Change { kind: ChangeKind::Removed, item: Item::ValueTable(v.name.clone()), label: v.name.clone(), details: vec![] });
+            out.push(Change {
+                kind: ChangeKind::Removed,
+                item: Item::ValueTable(v.name.clone()),
+                label: v.name.clone(),
+                details: vec![],
+            });
         }
     }
 
     // Attribute definitions.
     for a in &right.attr_defs {
         match left.attr_def(&a.name) {
-            None => out.push(Change { kind: ChangeKind::Added, item: Item::AttrDef(a.name.clone()), label: a.name.clone(), details: vec![] }),
-            Some(l) if l != a || left.attr_default(&a.name) != right.attr_default(&a.name) => out.push(Change {
-                kind: ChangeKind::Modified,
+            None => out.push(Change {
+                kind: ChangeKind::Added,
                 item: Item::AttrDef(a.name.clone()),
                 label: a.name.clone(),
-                details: vec![(
-                    "definition".into(),
-                    format!("{:?} default {:?}", l.kind, left.attr_default(&a.name)),
-                    format!("{:?} default {:?}", a.kind, right.attr_default(&a.name)),
-                )],
+                details: vec![],
             }),
+            Some(l) if l != a || left.attr_default(&a.name) != right.attr_default(&a.name) => out
+                .push(Change {
+                    kind: ChangeKind::Modified,
+                    item: Item::AttrDef(a.name.clone()),
+                    label: a.name.clone(),
+                    details: vec![(
+                        "definition".into(),
+                        format!("{:?} default {:?}", l.kind, left.attr_default(&a.name)),
+                        format!("{:?} default {:?}", a.kind, right.attr_default(&a.name)),
+                    )],
+                }),
             _ => {}
         }
     }
     for a in &left.attr_defs {
         if right.attr_def(&a.name).is_none() {
-            out.push(Change { kind: ChangeKind::Removed, item: Item::AttrDef(a.name.clone()), label: a.name.clone(), details: vec![] });
+            out.push(Change {
+                kind: ChangeKind::Removed,
+                item: Item::AttrDef(a.name.clone()),
+                label: a.name.clone(),
+                details: vec![],
+            });
         }
     }
 
@@ -165,16 +257,31 @@ pub fn diff(left: &Dbc, right: &Dbc) -> Vec<Change> {
             Some(l) => {
                 let d = message_details(l, m);
                 if !d.is_empty() {
-                    out.push(Change { kind: ChangeKind::Modified, item: Item::Message(m.id), label: format!("{} ({})", m.name, m.id_hex()), details: d });
+                    out.push(Change {
+                        kind: ChangeKind::Modified,
+                        item: Item::Message(m.id),
+                        label: format!("{} ({})", m.name, m.id_hex()),
+                        details: d,
+                    });
                 }
                 for s in &m.signals {
                     let label = format!("{}.{}", m.name, s.name);
                     match l.signal(&s.name) {
-                        None => out.push(Change { kind: ChangeKind::Added, item: Item::Signal(m.id, s.name.clone()), label, details: vec![] }),
+                        None => out.push(Change {
+                            kind: ChangeKind::Added,
+                            item: Item::Signal(m.id, s.name.clone()),
+                            label,
+                            details: vec![],
+                        }),
                         Some(ls) => {
                             let d = signal_details(ls, s);
                             if !d.is_empty() {
-                                out.push(Change { kind: ChangeKind::Modified, item: Item::Signal(m.id, s.name.clone()), label, details: d });
+                                out.push(Change {
+                                    kind: ChangeKind::Modified,
+                                    item: Item::Signal(m.id, s.name.clone()),
+                                    label,
+                                    details: d,
+                                });
                             }
                         }
                     }
@@ -194,7 +301,12 @@ pub fn diff(left: &Dbc, right: &Dbc) -> Vec<Change> {
     }
     for m in &left.messages {
         if right.message(m.id).is_none() {
-            out.push(Change { kind: ChangeKind::Removed, item: Item::Message(m.id), label: format!("{} ({})", m.name, m.id_hex()), details: vec![] });
+            out.push(Change {
+                kind: ChangeKind::Removed,
+                item: Item::Message(m.id),
+                label: format!("{} ({})", m.name, m.id_hex()),
+                details: vec![],
+            });
         }
     }
     out
@@ -238,13 +350,20 @@ pub fn apply(base: &mut Dbc, other: &Dbc, change: &Change) {
                 }
             }
             base.attr_defaults.retain(|x| &x.name != n);
-            base.attr_defaults.extend(other.attr_defaults.iter().filter(|x| &x.name == n).cloned());
+            base.attr_defaults
+                .extend(other.attr_defaults.iter().filter(|x| &x.name == n).cloned());
         }
         (Item::Message(id), ChangeKind::Removed) => base.remove_message(*id),
         (Item::Message(id), ChangeKind::Added) => {
             if let Some(src) = other.message(*id).cloned() {
                 base.messages.push(src);
-                base.signal_groups.extend(other.signal_groups.iter().filter(|g| g.message_id == *id).cloned());
+                base.signal_groups.extend(
+                    other
+                        .signal_groups
+                        .iter()
+                        .filter(|g| g.message_id == *id)
+                        .cloned(),
+                );
             }
         }
         (Item::Message(id), ChangeKind::Modified) => {

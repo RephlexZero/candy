@@ -30,7 +30,10 @@ pub struct ParseOutput {
 pub fn parse(src: &str) -> ParseOutput {
     let mut p = Parser::new(src);
     p.run();
-    ParseOutput { dbc: p.dbc, errors: p.errors }
+    ParseOutput {
+        dbc: p.dbc,
+        errors: p.errors,
+    }
 }
 
 /// Parse DBC text, failing on the first error.
@@ -165,7 +168,10 @@ impl<'a> Parser<'a> {
                 "SIG_VALTYPE_" => self.sig_valtype(),
                 "SG_MUL_VAL_" => self.sg_mul_val(),
                 "SG_" => Err("signal definition outside of a message (SG_ must follow BO_)".into()),
-                "" => Err(format!("unexpected character '{}'", self.peek().unwrap_or(' '))),
+                "" => Err(format!(
+                    "unexpected character '{}'",
+                    self.peek().unwrap_or(' ')
+                )),
                 _ => self.raw_statement(),
             };
             if let Err(message) = res {
@@ -259,7 +265,10 @@ impl<'a> Parser<'a> {
         self.skip_ws();
         let s = self.peek_ident();
         if s.is_empty() {
-            return Err(format!("expected identifier, found {}", self.describe_here()));
+            return Err(format!(
+                "expected identifier, found {}",
+                self.describe_here()
+            ));
         }
         self.pos += s.chars().count();
         Ok(s)
@@ -282,7 +291,11 @@ impl<'a> Parser<'a> {
             Some('\n') => "end of line".into(),
             Some(c) => {
                 let id = self.peek_ident();
-                if id.is_empty() { format!("'{c}'") } else { format!("'{id}'") }
+                if id.is_empty() {
+                    format!("'{c}'")
+                } else {
+                    format!("'{id}'")
+                }
             }
         }
     }
@@ -373,7 +386,10 @@ impl<'a> Parser<'a> {
     fn string(&mut self) -> PResult<String> {
         self.skip_ws();
         if self.peek() != Some('"') {
-            return Err(format!("expected quoted string, found {}", self.describe_here()));
+            return Err(format!(
+                "expected quoted string, found {}",
+                self.describe_here()
+            ));
         }
         self.pos += 1;
         let mut s = String::new();
@@ -449,7 +465,11 @@ impl<'a> Parser<'a> {
         while !matches!(self.peek(), None | Some('\n')) {
             self.pos += 1;
         }
-        self.dbc.bit_timing = self.chars[start..self.pos].iter().collect::<String>().trim().to_string();
+        self.dbc.bit_timing = self.chars[start..self.pos]
+            .iter()
+            .collect::<String>()
+            .trim()
+            .to_string();
         Ok(())
     }
 
@@ -463,7 +483,10 @@ impl<'a> Parser<'a> {
             let name = self.ident()?;
             self.eat_inline(',');
             if !self.dbc.nodes.iter().any(|n| n.name == name) {
-                self.dbc.nodes.push(Node { name, ..Default::default() });
+                self.dbc.nodes.push(Node {
+                    name,
+                    ..Default::default()
+                });
             }
         }
         Ok(())
@@ -498,8 +521,18 @@ impl<'a> Parser<'a> {
         let name = self.ident()?;
         self.expect(':')?;
         let size = self.uint()?;
-        let transmitter = if self.at_line_end() { NO_NODE.to_string() } else { self.ident()? };
-        let mut msg = Message { id, name, size, transmitter, ..Default::default() };
+        let transmitter = if self.at_line_end() {
+            NO_NODE.to_string()
+        } else {
+            self.ident()?
+        };
+        let mut msg = Message {
+            id,
+            name,
+            size,
+            transmitter,
+            ..Default::default()
+        };
         loop {
             self.skip_ws();
             if self.peek_ident() != "SG_" {
@@ -509,7 +542,11 @@ impl<'a> Parser<'a> {
                 Ok(s) => msg.signals.push(s),
                 Err(e) => {
                     let (line, col) = self.line_col(self.pos);
-                    self.errors.push(ParseError { line, col, message: format!("in message {}: {e}", msg.name) });
+                    self.errors.push(ParseError {
+                        line,
+                        col,
+                        message: format!("in message {}: {e}", msg.name),
+                    });
                     while !matches!(self.peek(), None | Some('\n')) {
                         self.pos += 1;
                     }
@@ -527,7 +564,8 @@ impl<'a> Parser<'a> {
         let mut mux = Mux::None;
         if self.peek() != Some(':') {
             let tok = self.ident()?;
-            mux = parse_mux(&tok).ok_or_else(|| format!("invalid multiplexer indicator '{tok}'"))?;
+            mux =
+                parse_mux(&tok).ok_or_else(|| format!("invalid multiplexer indicator '{tok}'"))?;
         }
         self.expect(':')?;
         let start_bit = self.uint()?;
@@ -538,13 +576,23 @@ impl<'a> Parser<'a> {
         let byte_order = match self.peek() {
             Some('1') => ByteOrder::LittleEndian,
             Some('0') => ByteOrder::BigEndian,
-            _ => return Err(format!("expected byte order 0 or 1, found {}", self.describe_here())),
+            _ => {
+                return Err(format!(
+                    "expected byte order 0 or 1, found {}",
+                    self.describe_here()
+                ));
+            }
         };
         self.pos += 1;
         let value_type = match self.peek() {
             Some('+') => ValueType::Unsigned,
             Some('-') => ValueType::Signed,
-            _ => return Err(format!("expected '+' or '-', found {}", self.describe_here())),
+            _ => {
+                return Err(format!(
+                    "expected '+' or '-', found {}",
+                    self.describe_here()
+                ));
+            }
         };
         self.pos += 1;
         self.expect('(')?;
@@ -723,9 +771,18 @@ impl<'a> Parser<'a> {
         let name = self.string()?;
         let ty = self.ident()?;
         let kind = match ty.as_str() {
-            "INT" => AttrKind::Int { min: self.int()?, max: self.int()? },
-            "HEX" => AttrKind::Hex { min: self.int()?, max: self.int()? },
-            "FLOAT" => AttrKind::Float { min: self.float()?, max: self.float()? },
+            "INT" => AttrKind::Int {
+                min: self.int()?,
+                max: self.int()?,
+            },
+            "HEX" => AttrKind::Hex {
+                min: self.int()?,
+                max: self.int()?,
+            },
+            "FLOAT" => AttrKind::Float {
+                min: self.float()?,
+                max: self.float()?,
+            },
             "STRING" => AttrKind::String,
             "ENUM" => {
                 let mut opts = Vec::new();
@@ -753,11 +810,15 @@ impl<'a> Parser<'a> {
         }
         let t = self.number_text()?;
         if t.contains(['.', 'e', 'E']) && !t.starts_with("0x") {
-            Ok(AttrValue::Float(parse_f64(&t).ok_or_else(|| format!("invalid number '{t}'"))?))
+            Ok(AttrValue::Float(
+                parse_f64(&t).ok_or_else(|| format!("invalid number '{t}'"))?,
+            ))
         } else {
             match parse_i64(&t) {
                 Some(i) => Ok(AttrValue::Int(i)),
-                None => Ok(AttrValue::Float(parse_f64(&t).ok_or_else(|| format!("invalid number '{t}'"))?)),
+                None => Ok(AttrValue::Float(
+                    parse_f64(&t).ok_or_else(|| format!("invalid number '{t}'"))?,
+                )),
             }
         }
     }
@@ -767,7 +828,11 @@ impl<'a> Parser<'a> {
         let name = self.string()?;
         let value = self.attr_value()?;
         self.semicolon()?;
-        self.dbc.attr_defaults.push(AttrDefault { name, value, relation: kw == "BA_DEF_DEF_REL_" });
+        self.dbc.attr_defaults.push(AttrDefault {
+            name,
+            value,
+            relation: kw == "BA_DEF_DEF_REL_",
+        });
         Ok(())
     }
 
@@ -812,7 +877,12 @@ impl<'a> Parser<'a> {
             signals.push(self.ident()?);
             self.eat(',');
         }
-        self.dbc.signal_groups.push(SignalGroup { message_id, name, repetitions, signals });
+        self.dbc.signal_groups.push(SignalGroup {
+            message_id,
+            name,
+            repetitions,
+            signals,
+        });
         Ok(())
     }
 
@@ -862,7 +932,9 @@ impl<'a> Parser<'a> {
                 _ => {}
             }
         }
-        let text: String = self.chars[start..self.pos.min(self.chars.len())].iter().collect();
+        let text: String = self.chars[start..self.pos.min(self.chars.len())]
+            .iter()
+            .collect();
         self.dbc.extra.push(text.trim().to_string());
         Ok(())
     }
@@ -870,7 +942,11 @@ impl<'a> Parser<'a> {
     // ---- post-processing --------------------------------------------------------------------
 
     fn warn(&mut self, message: String) {
-        self.errors.push(ParseError { line: 0, col: 0, message });
+        self.errors.push(ParseError {
+            line: 0,
+            col: 0,
+            message,
+        });
     }
 
     fn resolve(&mut self) {
@@ -897,7 +973,10 @@ impl<'a> Parser<'a> {
             let slot = self.attr_slot(&target);
             match slot {
                 Some(list) => list.push(attr),
-                None => self.warn(format!("attribute {} refers to unknown object {target:?}", attr.name)),
+                None => self.warn(format!(
+                    "attribute {} refers to unknown object {target:?}",
+                    attr.name
+                )),
             }
         }
         for (id, sig, entries) in std::mem::take(&mut self.vals) {
@@ -945,10 +1024,21 @@ impl<'a> Parser<'a> {
         let d = &mut self.dbc;
         match t {
             CommentTarget::Network => Some(&mut d.comment),
-            CommentTarget::Node(n) => d.nodes.iter_mut().find(|x| &x.name == n).map(|x| &mut x.comment),
+            CommentTarget::Node(n) => d
+                .nodes
+                .iter_mut()
+                .find(|x| &x.name == n)
+                .map(|x| &mut x.comment),
             CommentTarget::Message(id) => d.message_mut(*id).map(|m| &mut m.comment),
-            CommentTarget::Signal(id, s) => d.message_mut(*id).and_then(|m| m.signal_mut(s)).map(|s| &mut s.comment),
-            CommentTarget::EnvVar(n) => d.env_vars.iter_mut().find(|e| &e.name == n).map(|e| &mut e.comment),
+            CommentTarget::Signal(id, s) => d
+                .message_mut(*id)
+                .and_then(|m| m.signal_mut(s))
+                .map(|s| &mut s.comment),
+            CommentTarget::EnvVar(n) => d
+                .env_vars
+                .iter_mut()
+                .find(|e| &e.name == n)
+                .map(|e| &mut e.comment),
         }
     }
 
@@ -956,12 +1046,21 @@ impl<'a> Parser<'a> {
         let d = &mut self.dbc;
         match t {
             CommentTarget::Network => Some(&mut d.attributes),
-            CommentTarget::Node(n) => d.nodes.iter_mut().find(|x| &x.name == n).map(|x| &mut x.attributes),
+            CommentTarget::Node(n) => d
+                .nodes
+                .iter_mut()
+                .find(|x| &x.name == n)
+                .map(|x| &mut x.attributes),
             CommentTarget::Message(id) => d.message_mut(*id).map(|m| &mut m.attributes),
-            CommentTarget::Signal(id, s) => {
-                d.message_mut(*id).and_then(|m| m.signal_mut(s)).map(|s| &mut s.attributes)
-            }
-            CommentTarget::EnvVar(n) => d.env_vars.iter_mut().find(|e| &e.name == n).map(|e| &mut e.attributes),
+            CommentTarget::Signal(id, s) => d
+                .message_mut(*id)
+                .and_then(|m| m.signal_mut(s))
+                .map(|s| &mut s.attributes),
+            CommentTarget::EnvVar(n) => d
+                .env_vars
+                .iter_mut()
+                .find(|e| &e.name == n)
+                .map(|e| &mut e.attributes),
         }
     }
 }
@@ -985,7 +1084,9 @@ fn parse_i64(t: &str) -> Option<i64> {
     let v = if let Some(h) = body.strip_prefix("0x").or_else(|| body.strip_prefix("0X")) {
         i64::from_str_radix(h, 16).ok()?
     } else {
-        body.parse::<i64>().ok().or_else(|| body.parse::<u64>().ok().map(|u| u as i64))?
+        body.parse::<i64>()
+            .ok()
+            .or_else(|| body.parse::<u64>().ok().map(|u| u as i64))?
     };
     Some(if neg { -v } else { v })
 }

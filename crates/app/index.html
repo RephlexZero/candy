@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CANdy — the sweetest CAN DBC editor</title>
+    <meta name="description" content="CANdy is a fast, private, browser-based CAN DBC editor: interactive bit layouts, multiplexing, naming conventions, lint with one-click fixes, a live frame decoder and DBC diff/merge. Rust + WebAssembly; your files never leave your device." />
+    <meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e0d0c" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta property="og:title" content="CANdy — CAN DBC editor" />
+    <meta property="og:description" content="Edit CAN databases in your browser: bit layouts, multiplexing, naming conventions, lint, decode and diff." />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 16 1.5 11.5v9z' fill='%23D98014' opacity='.55'/%3E%3Cpath d='M26 16l4.5-4.5v9z' fill='%23D98014' opacity='.55'/%3E%3Crect x='6' y='8' width='20' height='16' rx='8' fill='%23D98014'/%3E%3Cpath d='M11 8.6v14.8M16 8v16M21 8.6v14.8' stroke='white' stroke-width='2.2' opacity='.9'/%3E%3C/svg%3E" />
+    <link data-trunk rel="css" href="style.css" />
+    <link data-trunk rel="copy-dir" href="fonts" />
+    <link data-trunk rel="rust" data-wasm-opt="z" data-bin="candy-app" />
+    <script>
+      try {
+        var t = localStorage.getItem("candy.theme");
+        if (t) document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
+    <style>
+      #boot { position: fixed; inset: 0; display: grid; place-items: center; background: rgb(var(--page)); z-index: 999; }
+      #boot svg { width: 56px; height: 56px; animation: boot 1.2s ease-in-out infinite; }
+      @keyframes boot { 50% { transform: scale(.88) rotate(-6deg); opacity: .7; } }
+    </style>
+  </head>
+  <body>
+    <div id="boot">
+      <svg viewBox="0 0 32 32" aria-label="Loading CANdy"><path d="M6 16 1.5 11.5v9z" fill="#D98014" opacity=".55"/><path d="M26 16l4.5-4.5v9z" fill="#D98014" opacity=".55"/><rect x="6" y="8" width="20" height="16" rx="8" fill="#D98014"/><path d="M11 8.6v14.8M16 8v16M21 8.6v14.8" stroke="white" stroke-width="2.2" opacity=".9"/></svg>
+    </div>
+    <noscript>
+      <div style="max-width:560px;margin:15vh auto;font-family:system-ui;padding:0 20px">
+        <h1>CANdy</h1>
+        <p>CANdy is a CAN DBC editor that runs entirely in your browser using WebAssembly. Please enable JavaScript to use it.</p>
+      </div>
+    </noscript>
+  </body>
+</html>
