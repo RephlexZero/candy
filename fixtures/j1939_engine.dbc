@@ -1,0 +1,84 @@
+VERSION "CANdy example: J1939 engine subset"
+
+
+NS_ :
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	BA_DEF_DEF_
+
+BS_:
+
+BU_: Engine Transmission Brakes Cab
+
+
+BO_ 2364539904 EEC1: 8 Engine
+ SG_ EngTorqueMode : 0|4@1+ (1,0) [0|15] "" Transmission,Cab
+ SG_ DriversDemandEngPercentTorque : 8|8@1+ (1,-125) [-125|125] "%" Transmission
+ SG_ ActualEngPercentTorque : 16|8@1+ (1,-125) [-125|125] "%" Transmission,Brakes
+ SG_ EngSpeed : 24|16@1+ (0.125,0) [0|8031.875] "rpm" Transmission,Brakes,Cab
+ SG_ SrcAddrOfCtrlDevForEngCtrl : 40|8@1+ (1,0) [0|255] "" Transmission
+ SG_ EngStarterMode : 48|4@1+ (1,0) [0|15] "" Cab
+
+BO_ 2565866752 ETC2: 8 Transmission
+ SG_ TransSelectedGear : 0|8@1+ (1,-125) [-125|125] "" Engine,Cab
+ SG_ TransActualGearRatio : 8|16@1+ (0.001,0) [0|64.255] "" Engine
+ SG_ TransCurrentGear : 24|8@1+ (1,-125) [-125|125] "" Engine,Cab
+
+BO_ 2566843904 ET1: 8 Engine
+ SG_ EngCoolantTemp : 0|8@1+ (1,-40) [-40|210] "degC" Cab
+ SG_ EngFuelTemp1 : 8|8@1+ (1,-40) [-40|210] "degC" Cab
+ SG_ EngOilTemp1 : 16|16@1+ (0.03125,-273) [-273|1734.96875] "degC" Cab
+
+BO_ 2566844160 EFL_P1: 8 Engine
+ SG_ EngFuelDeliveryPress : 0|8@1+ (4,0) [0|1000] "kPa" Cab
+ SG_ EngOilLevel : 16|8@1+ (0.4,0) [0|100] "%" Cab
+ SG_ EngOilPress : 24|8@1+ (4,0) [0|1000] "kPa" Cab
+ SG_ EngCoolantLevel : 56|8@1+ (0.4,0) [0|100] "%" Cab
+
+BO_ 2566844672 CCVS1: 8 Brakes
+ SG_ TwoSpeedAxleSwitch : 0|2@1+ (1,0) [0|3] "" Engine
+ SG_ ParkingBrakeSwitch : 2|2@1+ (1,0) [0|3] "" Engine,Cab
+ SG_ WheelBasedVehicleSpeed : 8|16@1+ (0.00390625,0) [0|250.996] "km/h" Engine,Transmission,Cab
+ SG_ CruiseCtrlActive : 24|2@1+ (1,0) [0|3] "" Engine,Cab
+ SG_ BrakeSwitch : 28|2@1+ (1,0) [0|3] "" Engine,Transmission
+
+BO_ 2566844928 LFE1: 8 Engine
+ SG_ EngFuelRate : 0|16@1+ (0.05,0) [0|3212.75] "L/h" Cab
+ SG_ EngInstantaneousFuelEconomy : 16|16@1+ (0.001953125,0) [0|125.5] "km/L" Cab
+ SG_ EngThrottleValve1Pos : 48|8@1+ (0.4,0) [0|100] "%" Cab
+
+
+
+CM_ "Subset of SAE J1939-71 parameter groups for a heavy-duty engine.";
+CM_ BO_ 2364539904 "Electronic Engine Controller 1, PGN 61444.";
+CM_ SG_ 2364539904 EngSpeed "SPN 190: actual engine speed.";
+CM_ BO_ 2566844672 "Cruise Control / Vehicle Speed 1, PGN 65265.";
+CM_ SG_ 2566844672 WheelBasedVehicleSpeed "SPN 84.";
+BA_DEF_  "ProtocolType" STRING ;
+BA_DEF_  "Baudrate" INT 0 1000000;
+BA_DEF_ BO_  "GenMsgCycleTime" INT 0 3600000;
+BA_DEF_ BO_  "VFrameFormat" ENUM  "StandardCAN","ExtendedCAN","reserved","J1939PG";
+BA_DEF_ SG_  "SPN" INT 0 524287;
+BA_DEF_DEF_  "ProtocolType" "J1939";
+BA_DEF_DEF_  "Baudrate" 250000;
+BA_DEF_DEF_  "GenMsgCycleTime" 0;
+BA_DEF_DEF_  "VFrameFormat" 3;
+BA_DEF_DEF_  "SPN" 0;
+BA_ "ProtocolType" "J1939";
+BA_ "Baudrate" 250000;
+BA_ "GenMsgCycleTime" BO_ 2364539904 20;
+BA_ "GenMsgCycleTime" BO_ 2565866752 100;
+BA_ "GenMsgCycleTime" BO_ 2566843904 1000;
+BA_ "GenMsgCycleTime" BO_ 2566844160 500;
+BA_ "GenMsgCycleTime" BO_ 2566844672 100;
+BA_ "GenMsgCycleTime" BO_ 2566844928 100;
+BA_ "SPN" SG_ 2364539904 EngSpeed 190;
+BA_ "SPN" SG_ 2364539904 ActualEngPercentTorque 513;
+BA_ "SPN" SG_ 2566843904 EngCoolantTemp 110;
+BA_ "SPN" SG_ 2566844672 WheelBasedVehicleSpeed 84;
+VAL_ 2364539904 EngStarterMode 0 "start not requested" 1 "starter active, gear not engaged" 2 "starter active, gear engaged" 3 "start finished" 15 "not available" ;
+VAL_ 2566844672 ParkingBrakeSwitch 0 "not set" 1 "set" 2 "error" 3 "not available" ;
+VAL_ 2566844672 CruiseCtrlActive 0 "off" 1 "on" 2 "error" 3 "not available" ;

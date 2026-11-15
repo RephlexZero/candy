@@ -1,0 +1,131 @@
+VERSION "CANdy example: motorsport ECU 1.2"
+
+
+NS_ :
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	BA_DEF_DEF_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	BO_TX_BU_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: ECU PDM DASH LOGGER TCU
+VAL_TABLE_ VT_Gear 0 "Neutral" 1 "First" 2 "Second" 3 "Third" 4 "Fourth" 5 "Fifth" 6 "Sixth" 15 "Reverse" ;
+
+
+BO_ 1600 Eng_Data_1: 8 ECU
+ SG_ Eng_Speed : 0|16@1+ (1,0) [0|16000] "rpm" DASH,LOGGER,TCU
+ SG_ Throttle_Pos : 16|16@1+ (0.1,0) [0|100] "%" DASH,LOGGER,TCU
+ SG_ Manifold_Press : 32|16@1+ (0.1,0) [0|400] "kPa" LOGGER
+ SG_ Lambda_1 : 48|16@1+ (0.001,0) [0.5|1.5] "lambda" LOGGER,DASH
+
+BO_ 1601 Eng_Temps: 8 ECU
+ SG_ Coolant_Temp : 0|8@1+ (1,-40) [-40|215] "degC" DASH,LOGGER
+ SG_ Oil_Temp : 8|8@1+ (1,-40) [-40|215] "degC" DASH,LOGGER
+ SG_ Fuel_Temp : 16|8@1+ (1,-40) [-40|215] "degC" LOGGER
+ SG_ Oil_Press : 24|16@1+ (0.1,0) [0|1000] "kPa" DASH,LOGGER
+ SG_ Fuel_Press : 40|16@1+ (0.1,0) [0|1000] "kPa" LOGGER
+ SG_ Battery_Volt : 56|8@1+ (0.1,0) [0|25.5] "V" DASH,LOGGER
+
+BO_ 1616 Whl_Speeds: 8 ECU
+ SG_ Whl_Speed_FL : 0|16@1+ (0.01,0) [0|655.35] "km/h" DASH,LOGGER
+ SG_ Whl_Speed_FR : 16|16@1+ (0.01,0) [0|655.35] "km/h" DASH,LOGGER
+ SG_ Whl_Speed_RL : 32|16@1+ (0.01,0) [0|655.35] "km/h" DASH,LOGGER
+ SG_ Whl_Speed_RR : 48|16@1+ (0.01,0) [0|655.35] "km/h" DASH,LOGGER
+
+BO_ 1617 Damper_Pos: 8 LOGGER
+ SG_ Damper_Pos_FL : 0|16@1- (0.01,0) [-100|100] "mm" ECU
+ SG_ Damper_Pos_FR : 16|16@1- (0.01,0) [-100|100] "mm" ECU
+ SG_ Damper_Pos_RL : 32|16@1- (0.01,0) [-100|100] "mm" ECU
+ SG_ Damper_Pos_RR : 48|16@1- (0.01,0) [-100|100] "mm" ECU
+
+BO_ 1618 Tyre_Temps: 8 LOGGER
+ SG_ Tyre_Temp_LeftFront : 0|16@1+ (0.1,-50) [-50|250] "degC" DASH
+ SG_ Tyre_Temp_FR : 16|16@1+ (0.1,-50) [-50|250] "degC" DASH
+ SG_ Tyre_Temp_RL : 32|16@1+ (0.1,-50) [-50|250] "degC" DASH
+ SG_ Tyre_Temp_RR : 48|16@1+ (0.1,-50) [-50|250] "degC" DASH
+
+BO_ 1632 IMU_Data: 8 LOGGER
+ SG_ Accel_Lat : 0|16@1- (0.001,0) [-5|5] "g" ECU,DASH
+ SG_ Accel_Long : 16|16@1- (0.001,0) [-5|5] "g" ECU,DASH
+ SG_ Accel_Vert : 32|16@1- (0.001,0) [-5|5] "g" ECU
+ SG_ Yaw_Rate : 48|16@1- (0.01,0) [-300|300] "deg/s" ECU,DASH
+
+BO_ 1648 Gearbox: 4 TCU
+ SG_ Gear : 0|4@1+ (1,0) [0|15] "" ECU,DASH,LOGGER
+ SG_ Shift_Request : 4|2@1+ (1,0) [0|2] "" ECU
+ SG_ Clutch_Pos : 8|8@1+ (0.5,0) [0|100] "%" ECU,LOGGER
+ SG_ Gearbox_Oil_Temp : 16|8@1+ (1,-40) [-40|215] "degC" DASH,LOGGER
+ SG_ Shift_Cut_Active : 24|1@1+ (1,0) [0|1] "" ECU
+
+BO_ 1664 PDM_Status: 8 PDM
+ SG_ PDM_Page M : 0|4@1+ (1,0) [0|3] "" DASH,LOGGER
+ SG_ PDM_Volt_In m0 : 8|8@1+ (0.1,0) [0|25.5] "V" DASH,LOGGER
+ SG_ PDM_Total_Curr m0 : 16|16@1+ (0.01,0) [0|200] "A" DASH,LOGGER
+ SG_ PDM_Temp m0 : 32|8@1+ (1,-40) [-40|150] "degC" LOGGER
+ SG_ Out_Curr_Fuel_Pump m1 : 8|8@1+ (0.2,0) [0|50] "A" LOGGER
+ SG_ Out_Curr_Fan_L m1 : 16|8@1+ (0.2,0) [0|50] "A" LOGGER
+ SG_ Out_Curr_Fan_R m1 : 24|8@1+ (0.2,0) [0|50] "A" LOGGER
+ SG_ Out_Curr_Water_Pump m1 : 32|8@1+ (0.2,0) [0|50] "A" LOGGER
+ SG_ Out_Curr_Ignition m2 : 8|8@1+ (0.2,0) [0|50] "A" LOGGER
+ SG_ Out_Curr_Injectors m2 : 16|8@1+ (0.2,0) [0|50] "A" LOGGER
+ SG_ Out_Curr_Dash m2 : 24|8@1+ (0.2,0) [0|50] "A" LOGGER
+ SG_ Out_Status_Bits m3 : 8|32@1+ (1,0) [0|4294967295] "" DASH,LOGGER
+
+BO_ 1680 Dash_Buttons: 2 DASH
+ SG_ Btn_Pit_Limiter : 0|1@1+ (1,0) [0|1] "" ECU
+ SG_ Btn_Launch : 1|1@1+ (1,0) [0|1] "" ECU
+ SG_ Btn_Traction_Up : 2|1@1+ (1,0) [0|1] "" ECU
+ SG_ Btn_Traction_Down : 3|1@1+ (1,0) [0|1] "" ECU
+ SG_ Map_Select : 4|3@1+ (1,0) [0|7] "" ECU
+ SG_ Radio_Request : 7|1@1+ (1,0) [0|1] "" LOGGER
+
+
+
+CM_ "Example motorsport network: engine ECU, power distribution, dash and logger at 1 Mbit/s.";
+CM_ BU_ ECU "Engine control unit";
+CM_ BU_ PDM "Power distribution module";
+CM_ BU_ DASH "Driver display";
+CM_ BU_ LOGGER "Data logger with IMU and suspension sensors";
+CM_ BU_ TCU "Sequential gearbox controller";
+CM_ BO_ 1600 "Primary engine channels, 100 Hz.";
+CM_ SG_ 1600 Lambda_1 "Bank 1 wideband lambda.";
+CM_ SG_ 1601 Oil_Press "Gauge pressure after the filter.";
+CM_ BO_ 1664 "Multiplexed PDM telemetry. PDM_Page selects which block is sent.";
+CM_ SG_ 1664 PDM_Page "0 = supply, 1 = cooling outputs, 2 = engine outputs, 3 = status bits.";
+CM_ SG_ 1648 Shift_Request "0 = none, 1 = upshift, 2 = downshift.";
+BA_DEF_  "Baudrate" INT 0 1000000;
+BA_DEF_  "BusType" STRING ;
+BA_DEF_  "CANdy_NamingConvention" STRING ;
+BA_DEF_ BO_  "GenMsgCycleTime" INT 0 10000;
+BA_DEF_ BO_  "GenMsgSendType" ENUM  "Cyclic","Event","IfActive";
+BA_DEF_ SG_  "GenSigStartValue" INT 0 2147483647;
+BA_DEF_DEF_  "Baudrate" 1000000;
+BA_DEF_DEF_  "BusType" "CAN";
+BA_DEF_DEF_  "CANdy_NamingConvention" "";
+BA_DEF_DEF_  "GenMsgCycleTime" 0;
+BA_DEF_DEF_  "GenMsgSendType" 0;
+BA_DEF_DEF_  "GenSigStartValue" 0;
+BA_ "Baudrate" 1000000;
+BA_ "CANdy_NamingConvention" "motorsport";
+BA_ "GenMsgCycleTime" BO_ 1600 10;
+BA_ "GenMsgCycleTime" BO_ 1601 100;
+BA_ "GenMsgCycleTime" BO_ 1616 10;
+BA_ "GenMsgCycleTime" BO_ 1617 5;
+BA_ "GenMsgCycleTime" BO_ 1618 100;
+BA_ "GenMsgCycleTime" BO_ 1632 5;
+BA_ "GenMsgCycleTime" BO_ 1648 20;
+BA_ "GenMsgCycleTime" BO_ 1664 25;
+BA_ "GenMsgSendType" BO_ 1680 1;
+VAL_ 1648 Gear 0 "Neutral" 1 "First" 2 "Second" 3 "Third" 4 "Fourth" 5 "Fifth" 6 "Sixth" 15 "Reverse" ;
+VAL_ 1648 Shift_Request 0 "None" 1 "Upshift" 2 "Downshift" ;
+VAL_ 1664 PDM_Page 0 "Supply" 1 "Cooling" 2 "Engine" 3 "Status" ;
+VAL_ 1680 Map_Select 0 "Dry" 1 "Wet" 2 "Quali" 3 "Safety_Car" ;
+SIG_GROUP_ 1616 Wheel_Speeds 1 : Whl_Speed_FL Whl_Speed_FR Whl_Speed_RL Whl_Speed_RR;
+SIG_GROUP_ 1617 Dampers 1 : Damper_Pos_FL Damper_Pos_FR Damper_Pos_RL Damper_Pos_RR;

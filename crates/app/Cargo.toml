@@ -1,0 +1,9 @@
+[package]
+name = "candy-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+candy-dbc = { path = "../dbc" }

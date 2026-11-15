@@ -1,0 +1,108 @@
+VERSION "CANdy example: EV battery management 3.0"
+
+
+NS_ :
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	BA_DEF_DEF_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	BO_TX_BU_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: BMS VCU CHARGER INVERTER
+VAL_TABLE_ VT_BmsState 0 "INIT" 1 "STANDBY" 2 "PRECHARGE" 3 "DRIVE" 4 "CHARGE" 5 "FAULT" ;
+
+
+BO_ 256 BMS_PackStatus: 8 BMS
+ SG_ PackVoltage : 0|16@1+ (0.01,0) [0|655.35] "V" VCU,CHARGER
+ SG_ PackCurrent : 16|16@1- (0.1,0) [-1000|1000] "A" VCU,CHARGER
+ SG_ StateOfCharge : 32|8@1+ (0.5,0) [0|100] "%" VCU
+ SG_ StateOfHealth : 40|8@1+ (0.5,0) [0|100] "%" VCU
+ SG_ BmsState : 48|4@1+ (1,0) [0|5] "" VCU,CHARGER
+ SG_ ContactorsClosed : 52|1@1+ (1,0) [0|1] "" VCU
+ SG_ Counter : 56|4@1+ (1,0) [0|15] "" VCU
+ SG_ Checksum : 60|4@1+ (1,0) [0|15] "" VCU
+
+BO_ 272 BMS_CellVoltages: 8 BMS
+ SG_ CellGroup M : 0|8@1+ (1,0) [0|3] "" VCU
+ SG_ Cell01_Voltage m0 : 8|16@1+ (0.0001,0) [0|5] "V" VCU
+ SG_ Cell02_Voltage m0 : 24|16@1+ (0.0001,0) [0|5] "V" VCU
+ SG_ Cell03_Voltage m0 : 40|16@1+ (0.0001,0) [0|5] "V" VCU
+ SG_ Cell04_Voltage m1 : 8|16@1+ (0.0001,0) [0|5] "V" VCU
+ SG_ Cell05_Voltage m1 : 24|16@1+ (0.0001,0) [0|5] "V" VCU
+ SG_ Cell06_Voltage m1 : 40|16@1+ (0.0001,0) [0|5] "V" VCU
+ SG_ Cell07_Voltage m2 : 8|16@1+ (0.0001,0) [0|5] "V" VCU
+ SG_ Cell08_Voltage m2 : 24|16@1+ (0.0001,0) [0|5] "V" VCU
+ SG_ Cell09_Voltage m2 : 40|16@1+ (0.0001,0) [0|5] "V" VCU
+ SG_ CellMin_Voltage m3 : 8|16@1+ (0.0001,0) [0|5] "V" VCU
+ SG_ CellMax_Voltage m3 : 24|16@1+ (0.0001,0) [0|5] "V" VCU
+ SG_ CellImbalance m3 : 40|16@1+ (0.0001,0) [0|5] "V" VCU
+
+BO_ 288 BMS_Diagnostics: 8 BMS
+ SG_ DiagService M : 0|8@1+ (1,0) [0|255] "" VCU
+ SG_ DiagSubPage m1M : 8|8@1+ (1,0) [0|255] "" VCU
+ SG_ FaultCode m1 : 16|16@1+ (1,0) [0|65535] "" VCU
+ SG_ IsoResistance m2 : 16|16@1+ (1,0) [0|65535] "kOhm" VCU
+ SG_ ThermistorTemp m3 : 16|8@1+ (1,-40) [-40|215] "degC" VCU
+ SG_ ThermistorIndex m3 : 24|8@1+ (1,0) [0|255] "" VCU
+
+BO_ 512 INV_TorqueFeedback: 8 INVERTER
+ SG_ MotorTorque : 0|32@1- (1,0) [-500|500] "Nm" VCU
+ SG_ MotorSpeed : 32|16@1- (1,0) [-20000|20000] "rpm" VCU
+ SG_ InverterTemp : 48|8@1+ (1,-40) [-40|215] "degC" VCU,BMS
+
+BO_ 768 CHG_Status: 12 CHARGER
+ SG_ ChargerOutputVoltage : 7|16@0+ (0.1,0) [0|1000] "V" BMS,VCU
+ SG_ ChargerOutputCurrent : 23|16@0+ (0.1,0) [0|500] "A" BMS,VCU
+ SG_ ChargerState : 39|8@0+ (1,0) [0|5] "" BMS,VCU
+ SG_ AcInputVoltage : 47|16@0+ (0.1,0) [0|500] "V" VCU
+ SG_ ChargerEfficiency : 63|32@0- (1,0) [0|1] "" VCU
+
+BO_ 769 VCU_ChargeRequest: 8 VCU
+ SG_ MaxChargeVoltage : 7|16@0+ (0.1,0) [0|1000] "V" CHARGER
+ SG_ MaxChargeCurrent : 23|16@0+ (0.1,0) [0|500] "A" CHARGER
+ SG_ ChargeEnable : 32|1@1+ (1,0) [0|1] "" CHARGER
+
+
+
+BO_TX_BU_ 769 : VCU,BMS;
+CM_ "Example EV pack network: 96s pack, BMS, VCU, inverter and CAN FD on-board charger.";
+CM_ BO_ 272 "Cell voltages, three per frame. CellGroup selects the block (simple multiplexing).";
+CM_ BO_ 288 "Nested multiplexing: DiagService selects a service; service 1 has sub-pages selected by DiagSubPage.";
+CM_ SG_ 512 MotorTorque "IEEE-754 single-precision float.";
+CM_ SG_ 768 ChargerEfficiency "IEEE-754 single-precision float, 0..1.";
+CM_ BO_ 768 "CAN FD frame (12 bytes), Motorola byte order.";
+CM_ SG_ 256 Counter "Rolling counter, increments every frame.";
+BA_DEF_  "Baudrate" INT 0 1000000;
+BA_DEF_  "CANdy_NamingConvention" STRING ;
+BA_DEF_ BO_  "GenMsgCycleTime" INT 0 10000;
+BA_DEF_ BO_  "VFrameFormat" ENUM  "StandardCAN","ExtendedCAN","reserved","J1939PG","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","StandardCAN_FD","ExtendedCAN_FD";
+BA_DEF_DEF_  "Baudrate" 500000;
+BA_DEF_DEF_  "CANdy_NamingConvention" "";
+BA_DEF_DEF_  "GenMsgCycleTime" 0;
+BA_DEF_DEF_  "VFrameFormat" 0;
+BA_ "Baudrate" 500000;
+BA_ "CANdy_NamingConvention" "vector";
+BA_ "GenMsgCycleTime" BO_ 256 20;
+BA_ "GenMsgCycleTime" BO_ 272 50;
+BA_ "GenMsgCycleTime" BO_ 288 200;
+BA_ "GenMsgCycleTime" BO_ 512 10;
+BA_ "GenMsgCycleTime" BO_ 768 100;
+BA_ "GenMsgCycleTime" BO_ 769 100;
+BA_ "VFrameFormat" BO_ 768 14;
+VAL_ 256 BmsState 0 "INIT" 1 "STANDBY" 2 "PRECHARGE" 3 "DRIVE" 4 "CHARGE" 5 "FAULT" ;
+VAL_ 768 ChargerState 0 "Idle" 1 "Ramp" 2 "CC" 3 "CV" 4 "Done" 5 "Fault" ;
+VAL_ 288 DiagService 1 "Faults" 2 "Isolation" 3 "Thermal" ;
+SIG_VALTYPE_ 512 MotorTorque : 1;
+SIG_VALTYPE_ 768 ChargerEfficiency : 1;
+SG_MUL_VAL_ 288 DiagSubPage DiagService 1-1;
+SG_MUL_VAL_ 288 FaultCode DiagSubPage 0-15;
+SG_MUL_VAL_ 288 IsoResistance DiagService 2-2;
+SG_MUL_VAL_ 288 ThermistorTemp DiagService 3-3;
+SG_MUL_VAL_ 288 ThermistorIndex DiagService 3-3;
